@@ -1,0 +1,884 @@
+/* Custom CSS for the Tarokka App */
+:root {
+    --color-burgundy: #5C001F;
+    --color-forest-green: #2A422B;
+    --color-muted-gold: #B8860B;
+    --color-tarnished-silver: #A9A9A9;
+    --color-dark-gray: #333333;
+    --color-charcoal-black: #1A1A1A;
+    --color-off-white: #F5F5DC; /* Aged parchment */
+    --color-accent-red: #8B0000; /* Deeper red for accents */
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--color-charcoal-black);
+    overflow: hidden; /* Prevent scrollbars from parallax */
+}
+
+/* Custom Cursor - Changed to hand pointer */
+body {
+    cursor: pointer;
+}
+
+
+/* Preloader styles */
+#preloader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--color-charcoal-black);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 1000;
+    transition: opacity 1s ease-out;
+}
+
+.preloader-symbol {
+    width: 100px;
+    height: 100px;
+    border: 5px solid var(--color-muted-gold);
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Main Game View */
+#main-game-view {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    perspective: 1500px;
+    transition: opacity 0.5s ease-in-out;
+}
+
+/* Background environment with parallax */
+#background-table {
+    position: absolute;
+    width: 100vw; /* Full screen width */
+    height: 100vh; /* Full screen height */
+    background-image: url('./IMG/table.gif'); /* Updated path */
+    background-size: cover; /* Ensures the GIF covers the entire element */
+    background-position: center;
+    transition: transform 0.1s ease-out;
+    box-shadow: none; /* Removed shadow to show full content */
+}
+
+/* Vignette effect */
+#main-game-view::before { /* Apply to main-game-view */
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    box-shadow: inset 0 0 180px rgba(0, 0, 0, 0.9); /* Stronger vignette */
+    pointer-events: none;
+    z-index: 2; /* Above background, below cards */
+}
+
+/* Dust motes effect */
+.dust-motes {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.dust-mote {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    opacity: 0;
+    animation: floatAndFade 15s infinite ease-in-out;
+}
+
+@keyframes floatAndFade {
+    0% { transform: translate(0, 0) scale(0.5); opacity: 0; }
+    25% { opacity: 0.5; }
+    50% { transform: translate(100px, 200px) scale(1); opacity: 0.7; }
+    75% { opacity: 0.5; }
+    100% { transform: translate(200px, 400px) scale(0.5); opacity: 0; }
+}
+
+/* Card container and positioning for cross layout */
+#card-spread-container {
+    position: relative;
+    width: 600px; /* Fixed width for consistent layout */
+    height: 600px; /* Fixed height for consistent layout */
+    max-width: 90vw; /* Responsive max width */
+    max-height: 90vh; /* Responsive max height */
+    display: grid;
+    /* Define grid areas for the cross layout */
+    grid-template-areas:
+        ". tome ."
+        "holySymbol strahd sunsword"
+        ". ally .";
+    grid-template-columns: 1fr 1fr 1fr; /* Three equal columns */
+    grid-template-rows: 1fr 1fr 1fr; /* Three equal rows */
+    gap: 5px; /* Very small gap between cards */
+    place-items: center; /* Center items in their grid areas */
+    z-index: 10;
+    padding: 10px; /* Reduced padding */
+    background-color: transparent; /* Make background transparent to show table */
+    border-radius: 15px;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.4); /* Subtle inner shadow */
+    border: 1px solid rgba(184, 134, 11, 0.1); /* Very subtle border for definition */
+    transition: all 0.5s ease-in-out; /* For player view transition */
+}
+
+.card-position {
+    position: relative;
+    width: 110px; /* Adjusted card width */
+    height: 190px; /* Adjusted card height (maintaining aspect ratio) */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 1px dashed rgba(255, 255, 255, 0.05); /* Even lighter placeholder border */
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border 0.3s ease; /* Smooth transition for border */
+}
+
+.card-position.has-card {
+    border: none; /* Remove dashed border when card is present */
+}
+
+/* Assign grid areas to specific positions */
+#position-tome { grid-area: tome; }
+#position-holySymbol { grid-area: holySymbol; }
+#position-sunsword { grid-area: sunsword; }
+#position-ally { grid-area: ally; }
+#position-strahd { grid-area: strahd; }
+
+
+/* Card styling */
+.card {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    transform-style: preserve-3d;
+    transform: rotateY(0deg); /* Explicitly define initial state for robust animation */
+    /* Enhanced transition for magical flip */
+    transition: transform 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55), /* Slower, more dramatic flip with overshoot */
+                box-shadow 0.6s ease-in-out; /* Smooth shadow transition */
+    cursor: pointer;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7); /* Stronger initial shadow for depth */
+    /* Ensure cards are always clickable */
+    pointer-events: auto !important;
+}
+
+.card.flipped {
+    transform: rotateY(180deg) scale(1.05); /* Scale up slightly when flipped */
+    /* More magical glow on flip */
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9), /* Deeper dark shadow */
+                0 0 40px rgba(184, 134, 11, 0.8), /* Stronger gold glow */
+                0 0 80px rgba(128, 0, 128, 0.4); /* Subtle purple aura */
+}
+
+/* Hover effect for unflipped cards */
+.card:not(.flipped):hover {
+    transform: translateY(-10px) scale(1.05);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(184, 134, 11, 0.5);
+}
+
+
+.card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 8px;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+}
+
+/* Corrected initial transforms for card faces */
+.card-front {
+    background-color: var(--color-off-white); /* Fallback */
+    transform: rotateY(180deg); /* Starts hidden, rotated away */
+}
+
+.card-back {
+    /* Default card back - will be overridden by JS if local file exists */
+    background-image: url('./IMG/back.png'); /* Updated path */
+    background-color: var(--color-burgundy); /* Fallback */
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.7); /* Inner shadow for depth */
+    transition: box-shadow 0.3s ease, filter 0.3s ease;
+    transform: rotateY(0deg); /* Starts visible, facing forward */
+}
+
+/* New class for clearing animation */
+.card.clearing {
+    transition: transform 1.5s ease-in-out, opacity 1.5s ease-in-out;
+    transform: scale(0) translateY(200px) rotateZ(180deg); /* Dramatic exit */
+    opacity: 0;
+}
+
+
+.card-back:hover {
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.4), inset 0 0 20px rgba(0,0,0,0.9); /* Subtle glow on hover */
+    filter: brightness(1.2); /* Slight brightening */
+}
+
+/* Fortune text display */
+#fortune-display {
+    position: absolute;
+    bottom: 5%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 700px;
+    background-color: rgba(26, 26, 26, 0.95); /* Charcoal black with higher opacity */
+    border: 2px solid var(--color-muted-gold);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.9); /* Stronger shadow */
+    z-index: 20;
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    gap: 15px;
+    font-family: 'Merriweather', serif; /* Atmospheric serif font */
+    color: var(--color-off-white);
+    max-height: 30vh;
+    overflow-y: auto;
+    transition: opacity 0.5s ease-in-out;
+    opacity: 0;
+}
+
+#fortune-display.active {
+    display: flex;
+    opacity: 1;
+}
+
+.fortune-entry {
+    margin-bottom: 10px;
+}
+
+.fortune-entry h3 {
+    color: var(--color-muted-gold); /* Reverted to original variable */
+    font-size: 1.3em;
+    margin-bottom: 5px;
+    border-bottom: 1px solid rgba(184, 134, 11, 0.3);
+    padding-bottom: 5px;
+}
+
+.fortune-entry p {
+    font-size: 1em;
+    line-height: 1.5;
+    color: var(--color-off-white); /* Reverted to original variable */
+}
+
+/* DM Interface Container */
+#dm-interface-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Space between elements */
+    z-index: 30;
+    opacity: 0; /* Initially hidden */
+    pointer-events: none; /* Disable interaction when hidden */
+    transform: translateX(-100%); /* Start off-screen */
+    transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+}
+
+#dm-interface-container.active {
+    opacity: 1; /* Visible */
+    pointer-events: auto; /* Enable interaction */
+    transform: translateX(0); /* Slide into view */
+}
+
+/* UI elements - DM Panel */
+#dm-control-panel {
+    width: 230px; /* Increased width by 50px */
+    background-color: rgba(26, 26, 26, 0.05); /* Very faded */
+    border: 1px solid rgba(184, 134, 11, 0.05); /* Faded border */
+    border-radius: 8px;
+    padding: 8px; /* Reduced padding */
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2); /* Lighter shadow */
+    max-height: 95vh;
+    overflow-y: auto;
+    color: var(--color-off-white);
+    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+#dm-control-panel:hover {
+    background-color: rgba(26, 26, 26, 0.95); /* Full opacity on hover */
+    border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
+}
+
+
+.dm-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 4px; /* Even smaller gap */
+}
+
+.dm-controls h2 {
+    font-size: 1.1em; /* Smaller font for title */
+    margin-bottom: 8px;
+    text-align: center;
+    color: var(--color-muted-gold);
+}
+
+.dm-controls h3 {
+    font-size: 0.9em; /* Smaller font for section titles */
+    color: var(--color-tarnished-silver);
+    margin-bottom: 4px;
+}
+
+.dm-controls label {
+    color: var(--color-tarnished-silver);
+    font-size: 0.7em; /* Smaller font size */
+    margin-bottom: 0px; /* Reduced margin */
+    display: block;
+}
+
+.dm-controls select {
+    background-color: var(--color-dark-gray);
+    color: var(--color-off-white);
+    border: 1px solid var(--color-burgundy);
+    border-radius: 4px; /* Slightly smaller radius */
+    padding: 3px; /* Reduced padding */
+    width: 100%;
+    font-size: 0.7em; /* Smaller font size */
+    appearance: none; /* Remove default arrow */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23A9A9A9'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3Csvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 4px center; /* Adjusted position */
+    background-size: 8px; /* Smaller arrow */
+}
+
+.dm-controls button {
+    background-color: #8B0000; /* Darker red */
+    color: var(--color-off-white);
+    padding: 5px 8px; /* Reduced padding */
+    border-radius: 5px; /* Slightly smaller radius */
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
+    font-weight: bold;
+    box-shadow: 0 1px 5px rgba(139, 0, 0, 0.5); /* Dark red glow */
+    position: relative;
+    overflow: hidden;
+    font-size: 0.75em; /* Smaller font */
+}
+
+.dm-controls button:hover {
+    background-color: #A00000; /* Slightly lighter red on hover */
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.7); /* Stronger dark red glow */
+}
+
+.dm-controls button:active {
+    transform: translateY(0);
+    box-shadow: 0 0px 2px rgba(139, 0, 0, 0.3);
+}
+
+/* Button hover glow */
+.dm-controls button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    transition: width 0.4s ease, height 0.4s ease, opacity 0.4s ease;
+}
+
+.dm-controls button:hover::before {
+    width: 200%;
+    height: 200%;
+    opacity: 1;
+}
+
+/* Prophecy Log Sidebar */
+#prophecy-log {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 180px; /* More compact width, same as DM panel */
+    background-color: rgba(26, 26, 26, 0.7); /* More opaque */
+    border: 1px solid rgba(184, 134, 11, 0.2); /* Muted gold border */
+    border-radius: 8px;
+    padding: 8px; /* Reduced padding */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Smaller shadow */
+    z-index: 25;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    color: var(--color-off-white);
+    font-family: 'Merriweather', serif;
+    max-height: 95vh;
+    overflow-y: auto;
+    transition: opacity 0.3s ease-in-out;
+}
+#prophecy-log:hover {
+    opacity: 1; /* Full opacity on hover */
+    background-color: rgba(26, 26, 26, 0.95); /* Less faded on hover */
+    border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
+}
+
+
+#prophecy-log h3 {
+    font-size: 1em; /* Smaller font size */
+    color: var(--color-muted-gold);
+    margin-bottom: 6px; /* Reduced margin */
+    text-align: center;
+    border-bottom: 1px solid rgba(184, 134, 11, 0.2); /* Faded border */
+    padding-bottom: 3px; /* Reduced padding */
+}
+
+.log-entry {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px; /* Reduced margin */
+    background-color: rgba(0, 0, 0, 0.2); /* More faded */
+    padding: 5px; /* Reduced padding */
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.05); /* Even lighter border */
+    font-size: 0.7em; /* Even smaller font for log entries */
+}
+
+.log-entry .card-thumbnail {
+    width: 30px; /* Smaller thumbnail */
+    height: 52px; /* Adjusted aspect ratio for 110x190 */
+    background-size: cover;
+    background-position: center;
+    border-radius: 3px;
+    margin-right: 6px; /* Reduced margin */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); /* Smaller shadow */
+}
+
+.log-entry .log-text {
+    flex-grow: 1;
+}
+
+.log-entry .log-text strong {
+    color: var(--color-tarnished-silver);
+    display: block;
+    margin-bottom: 1px;
+}
+
+.log-entry .log-text span {
+    font-size: 1em; /* Relative to parent .log-entry font size */
+    line-height: 1.2;
+}
+
+/* Candle light source */
+#candle-light-source {
+    position: absolute;
+    width: 100px; /* Size of the light effect */
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle at center, rgba(255, 165, 0, 0.4) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 5; /* Below cards, above background */
+    filter: blur(15px); /* Soft glow */
+    transition: box-shadow 0.1s ease-out; /* For flickering */
+    top: 50%; /* Position near the center of the table */
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 50px rgba(255, 165, 0, 0.5); /* Initial glow */
+}
+
+/* Legal Mention */
+#legal-mention {
+    position: fixed;
+    bottom: 5px;
+    right: 5px;
+    font-size: 0.6em; /* Very tiny font */
+    color: rgba(255, 255, 255, 0.3); /* Transparent white */
+    z-index: 100;
+    pointer-events: none; /* Ensure it doesn't interfere with clicks */
+    text-align: right; /* Align text to the right */
+}
+
+/* DM Toggle Button */
+#toggle-dm-btn {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background-color: rgba(139, 0, 0, 0.7); /* Faded red */
+    color: rgba(255, 255, 255, 0.5); /* Faded white */
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9em;
+    transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, opacity 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    opacity: 0.7; /* Initially faded */
+}
+#toggle-dm-btn:hover {
+    background-color: #8B0000; /* Less faded on hover */
+    color: #FFFFFF; /* Brighter on hover */
+    transform: translateY(-2px);
+    opacity: 1;
+}
+
+/* ESC Indicator for Cast Mode */
+#esc-indicator {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    font-size: 1.5em;
+    color: rgba(255, 255, 255, 0.3); /* Very faint */
+    font-family: 'Inter', sans-serif;
+    font-weight: bold;
+    z-index: 60;
+    pointer-events: none; /* Non-interactive */
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.3s ease-in-out;
+}
+#esc-indicator.active {
+    opacity: 1;
+}
+
+/* Styling for the new Patreon button and Cast to Players button to match DM panel faded style */
+.faded-button {
+    width: 230px; /* Match DM panel width */
+    background-color: rgba(26, 26, 26, 0.05); /* Very faded */
+    border: 1px solid rgba(184, 134, 11, 0.05); /* Faded border */
+    border-radius: 8px;
+    padding: 8px; /* Match DM panel padding */
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    color: var(--color-off-white);
+    font-weight: bold;
+    font-size: 0.9em; /* Match DM panel h3 or similar */
+    cursor: pointer;
+    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    text-align: center; /* Center text */
+    display: flex; /* For icon and text alignment */
+    align-items: center;
+    justify-content: center;
+    gap: 8px; /* Space between icon and text */
+}
+
+.faded-button:hover {
+    background-color: rgba(26, 26, 26, 0.95); /* Full opacity on hover */
+    border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
+}
+
+/* Hide elements when casting to players */
+.cast-mode-hidden {
+    display: none !important;
+}
+
+/* Volume button and slider styling */
+#volume-controls {
+    position: fixed;
+    bottom: 85px; /* Raised by 75px from 10px */
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    z-index: 50;
+    opacity: 0.5; /* Always faded */
+    transition: opacity 0.3s ease-in-out;
+}
+#volume-controls:hover {
+    opacity: 1;
+}
+
+#volume-btn {
+    background-color: rgba(26, 26, 26, 0.05); /* Very faded */
+    border: 1px solid rgba(184, 134, 11, 0.05); /* Faded border */
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    color: var(--color-off-white);
+    font-size: 1.2em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    width: 40px; /* Fixed width for icon button */
+    height: 40px; /* Fixed height for icon button */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+#volume-btn:hover {
+    background-color: rgba(26, 26, 26, 0.95); /* Full opacity on hover */
+    border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
+}
+
+#volume-slider {
+    width: 100px; /* Adjust width as needed */
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    background: rgba(184, 134, 11, 0.3); /* Muted gold track */
+    outline: none;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+#volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--color-muted-gold);
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+#volume-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--color-muted-gold);
+    cursor: pointer;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+#volume-slider::-webkit-slider-thumb:hover,
+#volume-slider::-moz-range-thumb:hover {
+    background: var(--color-accent-red); /* Red on hover */
+    transform: scale(1.1);
+}
+
+/* Music selector dropdown */
+#music-selector {
+    width: 100px; /* Match slider width */
+    margin-bottom: 5px; /* Space between selector and slider */
+    font-size: 0.75em;
+    padding: 4px 8px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23A9A9A9'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3Csvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 4px center;
+    background-size: 8px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    text-align: center;
+    background-color: rgba(26, 26, 26, 0.05); /* Faded style */
+    border: 1px solid rgba(184, 134, 11, 0.05); /* Faded border */
+    border-radius: 8px;
+    color: var(--color-off-white);
+    transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+#music-selector:hover {
+    background-color: rgba(26, 26, 26, 0.95); /* Full opacity on hover */
+    border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
+}
+
+/* DM Hint Box Styling */
+#dm-hint-box {
+    position: absolute;
+    top: 10px;
+    left: 50%; /* Center horizontally */
+    transform: translateX(-50%);
+    width: 300px; /* Small width */
+    background-color: rgba(26, 26, 26, 0.05); /* Very faded */
+    border: 1px solid rgba(184, 134, 11, 0.05); /* Faded border */
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    color: var(--color-off-white);
+    font-family: 'Merriweather', serif;
+    font-size: 0.85em;
+    z-index: 28; /* Below prophecy log, above main content */
+    opacity: 0; /* Hidden by default */
+    pointer-events: none; /* Non-interactive */
+    transition: opacity 0.3s ease-in-out;
+    max-height: 150px; /* Limit height */
+    overflow-y: auto; /* Scroll if content overflows */
+    display: block; /* Ensure it's not display: none */
+}
+
+#dm-hint-box.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#dm-hint-box:hover {
+    background-color: rgba(26, 26, 26, 0.95); /* Full opacity on hover */
+    border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+    #card-spread-container {
+        width: 600px;
+        height: 600px;
+        gap: 3px;
+    }
+    .card-position {
+        width: 110px;
+        height: 190px;
+    }
+    #fortune-display {
+        width: 90%;
+        padding: 15px;
+        font-size: 0.9em;
+    }
+    #dm-control-panel {
+        width: 200px; /* Even smaller for tablets */
+        padding: 6px;
+    }
+    #prophecy-log {
+        width: 150px; /* Keep consistent with previous */
+        padding: 6px;
+    }
+    .dm-controls button, .dm-controls select {
+        padding: 4px 6px;
+        font-size: 0.7em;
+    }
+    .log-entry .card-thumbnail {
+        width: 30px;
+        height: 52px;
+    }
+    #toggle-dm-btn {
+        padding: 6px 10px;
+        font-size: 0.8em;
+    }
+    #esc-indicator {
+        font-size: 1.2em;
+    }
+    .faded-button {
+        width: 200px; /* Match DM panel width */
+        padding: 6px;
+        font-size: 0.8em;
+    }
+    #volume-controls {
+        gap: 3px;
+        bottom: 85px; /* Keep consistent */
+    }
+    #volume-btn {
+        padding: 6px;
+        font-size: 1em;
+        width: 35px;
+        height: 35px;
+    }
+    #volume-slider {
+        width: 80px;
+    }
+    #music-selector {
+        width: 80px;
+    }
+    #dm-hint-box {
+        width: 250px;
+        padding: 8px;
+        font-size: 0.8em;
+    }
+}
+
+@media (max-width: 768px) {
+    #card-spread-container {
+        width: 350px;
+        height: 350px;
+        gap: 2px;
+    }
+    .card-position {
+        width: 80px;
+        height: 138px;
+    }
+    #fortune-display {
+        max-height: 40vh;
+        font-size: 0.8em;
+        bottom: 2%;
+    }
+    #dm-control-panel {
+        width: 170px; /* Very small for mobile */
+        top: 5px;
+        padding: 4px;
+    }
+    #prophecy-log {
+        width: 120px; /* Keep consistent with previous */
+        top: 5px;
+        padding: 4px;
+    }
+    .dm-controls h2 {
+        font-size: 0.9em;
+        margin-bottom: 5px;
+    }
+    .dm-controls h3 {
+        font-size: 0.8em;
+    }
+    .dm-controls label, .dm-controls select {
+        font-size: 0.6em;
+        padding: 2px;
+    }
+    .dm-controls button {
+        padding: 3px 5px;
+        font-size: 0.65em;
+    }
+    #legal-mention {
+        font-size: 0.5em;
+        bottom: 2px;
+        right: 2px;
+    }
+    #toggle-dm-btn {
+        padding: 5px 8px;
+        font-size: 0.7em;
+    }
+    #esc-indicator {
+        font-size: 1em;
+    }
+    .faded-button {
+        width: 170px; /* Match DM panel width */
+        padding: 4px;
+        font-size: 0.7em;
+    }
+    #volume-controls {
+        gap: 2px;
+        bottom: 85px; /* Keep consistent */
+    }
+    #volume-btn {
+        padding: 4px;
+        font-size: 0.9em;
+        width: 30px;
+        height: 30px;
+    }
+    #volume-slider {
+        width: 60px;
+    }
+    #music-selector {
+        width: 60px;
+    }
+    #dm-hint-box {
+        width: 200px;
+        padding: 6px;
+        font-size: 0.7em;
+    }
+}
