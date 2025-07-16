@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarokka Reading</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Merriweather:wght@400;700&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Custom CSS for the Tarokka App */
+        :root {
+            --color-burgundy: #5C001F;
+            --color-forest-green: #2A422B;
+            --color-muted-gold: #B8860B;
+            --color-tarnished-silver: #A9A9A9;
+            --color-dark-gray: #333333;
+            --color-charcoal-black: #1A1A1A;
+            --color-off-white: #F5F5DC; /* Aged parchment */
+            --color-accent-red: #8B0000; /* Deeper red for accents */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-charcoal-black);
+            overflow: hidden; /* Prevent scrollbars from parallax */
+        }
+
+        /* Custom Cursor - Changed to hand pointer */
+        body {
+            cursor: pointer;
+        }
+
+
+        /* Preloader styles */
+        #preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--color-charcoal-black);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+            transition: opacity 1s ease-out;
+        }
+
+        .preloader-symbol {
+            width: 100px;
+            height: 100px;
+            border: 5px solid var(--color-muted-gold);
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Main Game View */
+        #main-game-view {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            perspective: 1500px;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        /* Background environment with parallax */
+        #background-table {
+            position: absolute;
+            width: 100vw; /* Full screen width */
+            height: 100vh; /* Full screen height */
+            background-image: url('./IMG/table.gif'); /* Updated path */
+            background-size: cover; /* Ensures the GIF covers the entire element */
+            background-position: center;
+            transition: transform 0.1s ease-out;
+            box-shadow: none; /* Removed shadow to show full content */
+        }
+
+        /* Vignette effect */
+        #main-game-view::before { /* Apply to main-game-view */
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 0 0 180px rgba(0, 0, 0, 0.9); /* Stronger vignette */
+            pointer-events: none;
+            z-index: 2; /* Above background, below cards */
+        }
+
+        /* Dust motes effect */
+        .dust-motes {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .dust-mote {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            opacity: 0;
+            animation: floatAndFade 15s infinite ease-in-out;
+        }
+
+        @keyframes floatAndFade {
+            0% { transform: translate(0, 0) scale(0.5); opacity: 0; }
+            25% { opacity: 0.5; }
+            50% { transform: translate(100px, 200px) scale(1); opacity: 0.7; }
+            75% { opacity: 0.5; }
+            100% { transform: translate(200px, 400px) scale(0.5); opacity: 0; }
+        }
+
+        /* Card container and positioning for cross layout */
+        #card-spread-container {
+            position: relative;
+            width: 600px; /* Fixed width for consistent layout */
+            height: 600px; /* Fixed height for consistent layout */
+            max-width: 90vw; /* Responsive max width */
+            max-height: 90vh; /* Responsive max height */
+            display: grid;
+            /* Define grid areas for the cross layout */
+            grid-template-areas:
+                ". tome ."
+                "holySymbol strahd sunsword"
+                ". ally .";
+            grid-template-columns: 1fr 1fr 1fr; /* Three equal columns */
+            grid-template-rows: 1fr 1fr 1fr; /* Three equal rows */
+            gap: 5px; /* Very small gap between cards */
+            place-items: center; /* Center items in their grid areas */
+            z-index: 10;
+            padding: 10px; /* Reduced padding */
+            background-color: transparent; /* Make background transparent to show table */
+            border-radius: 15px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.4); /* Subtle inner shadow */
+            border: 1px solid rgba(184, 134, 11, 0.1); /* Very subtle border for definition */
+            transition: all 0.5s ease-in-out; /* For player view transition */
+        }
+
+        .card-position {
+            position: relative;
+            width: 110px; /* Adjusted card width */
+            height: 190px; /* Adjusted card height (maintaining aspect ratio) */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px dashed rgba(255, 255, 255, 0.05); /* Even lighter placeholder border */
+            border-radius: 8px;
+            overflow: hidden;
+            transition: border 0.3s ease; /* Smooth transition for border */
+        }
+
+        .card-position.has-card {
+            border: none; /* Remove dashed border when card is present */
+        }
+
+        /* Assign grid areas to specific positions */
+        #position-tome { grid-area: tome; }
+        #position-holySymbol { grid-area: holySymbol; }
+        #position-sunsword { grid-area: sunsword; }
+        #position-ally { grid-area: ally; }
+        #position-strahd { grid-area: strahd; }
+
+
+        /* Card styling */
+        .card {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform-style: preserve-3d;
+            transform: rotateY(0deg); /* Explicitly define initial state for robust animation */
+            /* Enhanced transition for magical flip */
+            transition: transform 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55), /* Slower, more dramatic flip with overshoot */
+                        box-shadow 0.6s ease-in-out; /* Smooth shadow transition */
+            cursor: pointer;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7); /* Stronger initial shadow for depth */
+            /* Ensure cards are always clickable */
+            pointer-events: auto !important;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg) scale(1.05); /* Scale up slightly when flipped */
+            /* More magical glow on flip */
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9), /* Deeper dark shadow */
+                        0 0 40px rgba(184, 134, 11, 0.8), /* Stronger gold glow */
+                        0 0 80px rgba(128, 0, 128, 0.4); /* Subtle purple aura */
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 8px;
+            background-size: cover;
+            background-position: center;
+            border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border */
+        }
+
+        .card-front {
+            background-color: var(--color-off-white); /* Fallback */
+            transform: rotateY(180deg);
+        }
+
+        .card-back {
+            /* Default card back - will be overridden by JS if local file exists */
+            background-image: url('./IMG/back.png'); /* Updated path */
+            background-color: var(--color-burgundy); /* Fallback */
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.7); /* Inner shadow for depth */
+            transition: box-shadow 0.3s ease, filter 0.3s ease;
+        }
+
+        .card-back:hover {
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.4), inset 0 0 20px rgba(0,0,0,0.9); /* Subtle glow on hover */
+            filter: brightness(1.2); /* Slight brightening */
+        }
+
+        /* Fortune text display */
+        #fortune-display {
+            position: absolute;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            max-width: 700px;
+            background-color: rgba(26, 26, 26, 0.95); /* Charcoal black with higher opacity */
+            border: 2px solid var(--color-muted-gold);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.9); /* Stronger shadow */
+            z-index: 20;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            gap: 15px;
+            font-family: 'Merriweather', serif; /* Atmospheric serif font */
+            color: var(--color-off-white);
+            max-height: 30vh;
+            overflow-y: auto;
+            transition: opacity 0.5s ease-in-out;
+            opacity: 0;
+        }
+
+        #fortune-display.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .fortune-entry {
+            margin-bottom: 10px;
+        }
+
+        .fortune-entry h3 {
+            color: var(--color-muted-gold);
+            font-size: 1.3em;
+            margin-bottom: 5px;
+            border-bottom: 1px solid rgba(184, 134, 11, 0.3);
+            padding-bottom: 5px;
+        }
+
+        .fortune-entry p {
+            font-size: 1em;
+            line-height: 1.5;
+        }
+
+        /* DM Interface Container */
+        #dm-interface-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* Space between elements */
+            z-index: 30;
+            opacity: 0; /* Initially hidden */
+            pointer-events: none; /* Disable interaction when hidden */
+            transform: translateX(-100%); /* Start off-screen */
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+        }
+
+        #dm-interface-container.active {
+            opacity: 1; /* Visible */
+            pointer-events: auto; /* Enable interaction */
+            transform: translateX(0); /* Slide into view */
+        }
+
+        /* UI elements - DM Panel */
+        #dm-control-panel {
+            width: 180px; /* Smaller width */
+            background-color: rgba(26, 26, 26, 0.05); /* Very faded */
+            border: 1px solid rgba(184, 134, 11, 0.05); /* Faded border */
+            border-radius: 8px;
+            padding: 8px; /* Reduced padding */
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2); /* Lighter shadow */
+            max-height: 95vh;
+            overflow-y: auto;
+            color: var(--color-off-white);
+            transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+        #dm-control-panel:hover {
+            background-color: rgba(26, 26, 26, 0.95); /* Full opacity on hover */
+            border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
+        }
+
+
+        .dm-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 4px; /* Even smaller gap */
+        }
+
+        .dm-controls h2 {
+            font-size: 1.1em; /* Smaller font for title */
+            margin-bottom: 8px;
+            text-align: center;
+            color: var(--color-muted-gold);
+        }
+
+        .dm-controls h3 {
+            font-size: 0.9em; /* Smaller font for section titles */
+            color: var(--color-tarnished-silver);
+            margin-bottom: 4px;
+        }
+
+        .dm-controls label {
+            color: var(--color-tarnished-silver);
+            font-size: 0.7em; /* Smaller font size */
+            margin-bottom: 0px; /* Reduced margin */
+            display: block;
+        }
+
+        .dm-controls select {
+            background-color: var(--color-dark-gray);
+            color: var(--color-off-white);
+            border: 1px solid var(--color-burgundy);
+            border-radius: 4px; /* Slightly smaller radius */
+            padding: 3px; /* Reduced padding */
+            width: 100%;
+            font-size: 0.7em; /* Smaller font size */
+            appearance: none; /* Remove default arrow */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23A9A9A9'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3Csvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 4px center; /* Adjusted position */
+            background-size: 8px; /* Smaller arrow */
+        }
+
+        .dm-controls button {
+            background-color: #8B0000; /* Darker red */
+            color: var(--color-off-white);
+            padding: 5px 8px; /* Reduced padding */
+            border-radius: 5px; /* Slightly smaller radius */
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
+            font-weight: bold;
+            box-shadow: 0 1px 5px rgba(139, 0, 0, 0.5); /* Dark red glow */
+            position: relative;
+            overflow: hidden;
+            font-size: 0.75em; /* Smaller font */
+        }
+
+        .dm-controls button:hover {
+            background-color: #A00000; /* Slightly lighter red on hover */
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(139, 0, 0, 0.7); /* Stronger dark red glow */
+        }
+
+        .dm-controls button:active {
+            transform: translateY(0);
+            box-shadow: 0 0px 2px rgba(139, 0, 0, 0.3);
+        }
+
+        /* Button hover glow */
+        .dm-controls button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            transition: width 0.4s ease, height 0.4s ease, opacity 0.4s ease;
+        }
+
+        .dm-controls button:hover::before {
+            width: 200%;
+            height: 200%;
+            opacity: 1;
+        }
+
+        /* DM Panel - Current Reading Display */
+        #current-reading-display {
+            background-color: rgba(0, 0, 0, 0.4); /* More faded */
+            border: 1px solid rgba(184, 134, 11, 0.2); /* Faded border */
+            border-radius: 6px;
+            padding: 8px;
+            margin-top: 10px;
+            color: var(--color-off-white);
+            font-size: 0.8em; /* Smaller font */
+            max-height: 150px; /* Reduced height */
+            overflow-y: auto;
+        }
+
+        #current-reading-display h4 {
+            color: var(--color-muted-gold);
+            font-weight: bold;
+            margin-bottom: 4px;
+            font-size: 1em;
+        }
+
+        #current-reading-display ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        #current-reading-display li {
+            margin-bottom: 3px;
+        }
+
+        #current-reading-display li span {
+            color: var(--color-tarnished-silver);
+        }
+
+        /* Prophecy Log Sidebar */
+        #prophecy-log {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 180px; /* More compact width, same as DM panel */
+            background-color: rgba(26, 26, 26, 0.7); /* More opaque */
+            border: 1px solid rgba(184, 134, 11, 0.2); /* Muted gold border */
+            border-radius: 8px;
+            padding: 8px; /* Reduced padding */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Smaller shadow */
+            z-index: 25;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            color: var(--color-off-white);
+            font-family: 'Merriweather', serif;
+            max-height: 95vh;
+            overflow-y: auto;
+            transition: opacity 0.3s ease-in-out;
+        }
+        #prophecy-log:hover {
+            opacity: 1; /* Full opacity on hover */
+            background-color: rgba(26, 26, 26, 0.95); /* Less faded on hover */
+            border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
+        }
+
+
+        #prophecy-log h3 {
+            font-size: 1em; /* Smaller font size */
+            color: var(--color-muted-gold);
+            margin-bottom: 6px; /* Reduced margin */
+            text-align: center;
+            border-bottom: 1px solid rgba(184, 134, 11, 0.2); /* Faded border */
+            padding-bottom: 3px; /* Reduced padding */
+        }
+
+        .log-entry {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px; /* Reduced margin */
+            background-color: rgba(0, 0, 0, 0.2); /* More faded */
+            padding: 5px; /* Reduced padding */
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.05); /* Even lighter border */
+            font-size: 0.7em; /* Even smaller font for log entries */
+        }
+
+        .log-entry .card-thumbnail {
+            width: 30px; /* Smaller thumbnail */
+            height: 52px; /* Adjusted aspect ratio for 110x190 */
+            background-size: cover;
+            background-position: center;
+            border-radius: 3px;
+            margin-right: 6px; /* Reduced margin */
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4); /* Smaller shadow */
+        }
+
+        .log-entry .log-text {
+            flex-grow: 1;
+        }
+
+        .log-entry .log-text strong {
+            color: var(--color-tarnished-silver);
+            display: block;
+            margin-bottom: 1px;
+        }
+
+        .log-entry .log-text span {
+            font-size: 1em; /* Relative to parent .log-entry font size */
+            line-height: 1.2;
+        }
+
+        /* Candle light source */
+        #candle-light-source {
+            position: absolute;
+            width: 100px; /* Size of the light effect */
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(255, 165, 0, 0.4) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 5; /* Below cards, above background */
+            filter: blur(15px); /* Soft glow */
+            transition: box-shadow 0.1s ease-out; /* For flickering */
+            top: 50%; /* Position near the center of the table */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 50px rgba(255, 165, 0, 0.5); /* Initial glow */
+        }
+
+        /* Legal Mention */
+        #legal-mention {
+            position: fixed;
+            bottom: 5px;
+            right: 5px;
+            font-size: 0.6em; /* Very tiny font */
+            color: rgba(255, 255, 255, 0.3); /* Transparent white */
+            z-index: 100;
+            pointer-events: none; /* Ensure it doesn't interfere with clicks */
+            text-align: right; /* Align text to the right */
+        }
+
+        /* DM Toggle Button */
+        #toggle-dm-btn {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(139, 0, 0, 0.7); /* Faded red */
+            color: rgba(255, 255, 255, 0.5); /* Faded white */
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease, color 0.3s ease, transform 0.2s ease, opacity 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            z-index: 50;
+            opacity: 0.7; /* Initially faded */
+        }
+        #toggle-dm-btn:hover {
+            background-color: #8B0000; /* Less faded on hover */
+            color: #FFFFFF; /* Brighter on hover */
+            transform: translateY(-2px);
+            opacity: 1;
+        }
+
+        /* ESC Indicator for Cast Mode */
+        #esc-indicator {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            font-size: 1.5em;
+            color: rgba(255, 255, 255, 0.3); /* Very faint */
+            font-family: 'Inter', sans-serif;
+            font-weight: bold;
+            z-index: 60;
+            pointer-events: none; /* Non-interactive */
+            opacity: 0; /* Hidden by default */
+            transition: opacity 0.3s ease-in-out;
+        }
+        #esc-indicator.active {
+            opacity: 1;
+        }
+
+        /* Styling for the new Patreon button and Cast to Players button to match DM panel faded style */
+        .faded-button {
+            width: 180px; /* Match DM panel width */
+            background-color: rgba(26, 26, 26, 0.05); /* Very faded */
+            border: 1px solid rgba(184, 134, 11, 0.05); /* Faded border */
+            border-radius: 8px;
+            padding: 8px; /* Match DM panel padding */
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+            color: var(--color-off-white);
+            font-weight: bold;
+            font-size: 0.9em; /* Match DM panel h3 or similar */
+            cursor: pointer;
+            transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            text-align: center; /* Center text */
+            display: flex; /* For icon and text alignment */
+            align-items: center;
+            justify-content: center;
+            gap: 8px; /* Space between icon and text */
+        }
+
+        .faded-button:hover {
+            background-color: rgba(26, 26, 26, 0.95); /* Full opacity on hover */
+            border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
+        }
+
+        /* Hide elements when casting to players */
+        .cast-mode-hidden {
+            display: none !important;
+        }
+
+        /* Volume button and slider styling */
+        #volume-controls {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+            z-index: 50;
+            opacity: 0.5; /* Always faded */
+            transition: opacity 0.3s ease-in-out;
+        }
+        #volume-controls:hover {
+            opacity: 1;
+        }
+
+        #volume-btn {
+            background-color: rgba(26, 26, 26, 0.05); /* Very faded */
+            border: 1px solid rgba(184, 134, 11, 0.05); /* Faded border */
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+            color: var(--color-off-white);
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            width: 40px; /* Fixed width for icon button */
+            height: 40px; /* Fixed height for icon button */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #volume-btn:hover {
+            background-color: rgba(26, 26, 26, 0.95); /* Full opacity on hover */
+            border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
+        }
+
+        #volume-slider {
+            width: 100px; /* Adjust width as needed */
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            background: rgba(184, 134, 11, 0.3); /* Muted gold track */
+            outline: none;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        #volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--color-muted-gold);
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        #volume-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--color-muted-gold);
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        #volume-slider::-webkit-slider-thumb:hover,
+        #volume-slider::-moz-range-thumb:hover {
+            background: var(--color-accent-red); /* Red on hover */
+            transform: scale(1.1);
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 1024px) {
+            #card-spread-container {
+                width: 600px;
+                height: 600px;
+                gap: 3px;
+            }
+            .card-position {
+                width: 110px;
+                height: 190px;
+            }
+            #fortune-display {
+                width: 90%;
+                padding: 15px;
+                font-size: 0.9em;
+            }
+            #dm-control-panel, #prophecy-log {
+                width: 150px; /* Even smaller for tablets */
+                padding: 6px;
+            }
+            .dm-controls button, .dm-controls select {
+                padding: 4px 6px;
+                font-size: 0.7em;
+            }
+            .log-entry .card-thumbnail {
+                width: 30px;
+                height: 52px;
+            }
+            #toggle-dm-btn {
+                padding: 6px 10px;
+                font-size: 0.8em;
+            }
+            #esc-indicator {
+                font-size: 1.2em;
+            }
+            .faded-button {
+                width: 150px;
+                padding: 6px;
+                font-size: 0.8em;
+            }
+            #volume-controls {
+                gap: 3px;
+            }
+            #volume-btn {
+                padding: 6px;
+                font-size: 1em;
+                width: 35px;
+                height: 35px;
+            }
+            #volume-slider {
+                width: 80px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #card-spread-container {
+                width: 350px;
+                height: 350px;
+                gap: 2px;
+            }
+            .card-position {
+                width: 80px;
+                height: 138px;
+            }
+            #fortune-display {
+                max-height: 40vh;
+                font-size: 0.8em;
+                bottom: 2%;
+            }
+            #dm-control-panel, #prophecy-log {
+                width: 120px; /* Very small for mobile */
+                top: 5px;
+                padding: 4px;
+            }
+            .dm-controls h2 {
+                font-size: 0.9em;
+                margin-bottom: 5px;
+            }
+            .dm-controls h3 {
+                font-size: 0.8em;
+            }
+            .dm-controls label, .dm-controls select {
+                font-size: 0.6em;
+                padding: 2px;
+            }
+            .dm-controls button {
+                padding: 3px 5px;
+                font-size: 0.65em;
+            }
+            #current-reading-display {
+                font-size: 0.7em;
+                padding: 5px;
+            }
+            #prophecy-log h3 {
+                font-size: 0.9em;
+            }
+            .log-entry {
+                font-size: 0.6em;
+                padding: 4px;
+            }
+            .log-entry .card-thumbnail {
+                width: 25px;
+                height: 43px;
+            }
+            #legal-mention {
+                font-size: 0.5em;
+                bottom: 2px;
+                right: 2px;
+            }
+            #toggle-dm-btn {
+                padding: 5px 8px;
+                font-size: 0.7em;
+            }
+            #esc-indicator {
+                font-size: 1em;
+            }
+            .faded-button {
+                width: 120px;
+                padding: 4px;
+                font-size: 0.7em;
+            }
+            #volume-controls {
+                gap: 2px;
+            }
+            #volume-btn {
+                padding: 4px;
+                font-size: 0.9em;
+                width: 30px;
+                height: 30px;
+            }
+            #volume-slider {
+                width: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="preloader-symbol"></div>
+        <p class="text-white text-lg font-bold">Summoning the Fates...</p>
+    </div>
+
+    <!-- Main Game View -->
+    <div id="main-game-view">
+        <!-- Background Table with Parallax -->
+        <div id="background-table" class="absolute inset-0 z-0"></div>
+
+        <!-- Dust Motes Effect -->
+        <div class="dust-motes"></div>
+
+        <!-- Candle Light Source -->
+        <div id="candle-light-source"></div>
+
+        <!-- DM Interface Container (holds DM controls, Patreon, and Cast button) -->
+        <div id="dm-interface-container">
+            <!-- Cast to Players Button (now above DM panel, same faded style) -->
+            <button id="cast-to-players-btn" class="faded-button">
+                <i class="fas fa-tv mr-2"></i>Cast to Players
+            </button>
+
+            <!-- DM Control Panel -->
+            <div id="dm-control-panel">
+                <h2 class="font-bold text-white mb-2">DM Controls</h2>
+
+                <div class="dm-controls">
+                    <!-- Rigging controls -->
+                    <div class="mb-3">
+                        <h3 class="font-semibold text-white mb-1">Rig the Deck:</h3>
+                        <div class="grid grid-cols-1 gap-2">
+                            <div class="flex items-center gap-1">
+                                <label for="rig-tome" class="flex-shrink-0">Tome:</label>
+                                <select id="rig-tome" data-position="tome" class="flex-grow"></select>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <label for="rig-holySymbol" class="flex-shrink-0">Holy Symbol:</label>
+                                <select id="rig-holySymbol" data-position="holySymbol" class="flex-grow"></select>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <label for="rig-sunsword" class="flex-shrink-0">Sunsword:</label>
+                                <select id="rig-sunsword" data-position="sunsword" class="flex-grow"></select>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <label for="rig-ally" class="flex-shrink-0">Ally:</label>
+                                <select id="rig-ally" data-position="ally" class="flex-grow"></select>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <label for="rig-strahd" data-position="strahd" class="flex-shrink-0">Strahd:</label>
+                                <select id="rig-strahd" data-position="strahd" class="flex-grow"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <button id="randomize-all-btn"><i class="fas fa-dice mr-1"></i>Randomize All</button>
+                    <button id="shuffle-deal-btn"><i class="fas fa-sync-alt mr-1"></i>Shuffle & Deal</button>
+                    <button id="reveal-all-btn"><i class="fas fa-eye mr-1"></i>Reveal All</button>
+                    <button id="hide-all-btn"><i class="fas fa-eye-slash mr-1"></i>Hide All</button>
+                    <button id="print-handout-btn"><i class="fas fa-print mr-1"></i>Print Handout</button>
+                    <button id="save-reading-btn"><i class="fas fa-save mr-1"></i>Save Fate</button>
+                    <button id="load-reading-btn"><i class="fas fa-folder-open mr-1"></i>Recall Prophecy</button>
+
+                    <!-- Current Reading Display -->
+                    <div id="current-reading-display">
+                        <h4>Current Reading:</h4>
+                        <ul id="current-reading-list">
+                            <!-- Populated by JS -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patreon Button (below DM options) -->
+            <button id="patreon-btn" class="faded-button" onclick="window.open('https://www.patreon.com/jimpeccable', '_blank');">
+                <i class="fab fa-patreon mr-2"></i>Support Me on Patreon
+            </button>
+        </div>
+
+
+        <!-- Card Spread Container -->
+        <div id="card-spread-container" class="relative z-10">
+            <!-- Card positions will be dynamically inserted here -->
+            <div id="position-tome" class="card-position" data-position="tome"></div>
+            <div id="position-holySymbol" class="card-position" data-position="holySymbol"></div>
+            <div id="position-sunsword" class="card-position" data-position="sunsword"></div>
+            <div id="position-ally" class="card-position" data-position="ally"></div>
+            <div id="position-strahd" class="card-position" data-position="strahd"></div>
+        </div>
+
+        <!-- Fortune Display Area -->
+        <div id="fortune-display" class="fortune-display">
+            <!-- Fortunes will be dynamically inserted here -->
+        </div>
+
+        <!-- Prophecy Log Sidebar (always visible) -->
+        <div id="prophecy-log">
+            <h3>Prophecy Log</h3>
+            <div id="log-entries">
+                <!-- Log entries will be populated here -->
+            </div>
+        </div>
+
+        <!-- DM Toggle Button (always visible) -->
+        <button id="toggle-dm-btn">
+            <i class="fas fa-hat-wizard mr-1"></i>DM Options
+        </button>
+
+        <!-- ESC Indicator for Cast Mode -->
+        <div id="esc-indicator">ESC</div>
+
+        <!-- Legal Mention -->
+        <div id="legal-mention">
+            <p>Card images &copy; Wizards of the Coast.</p>
+            <p>Music by DELOSound from Pixabay</p>
+        </div>
+
+        <!-- Volume Control Button and Slider -->
+        <div id="volume-controls">
+            <button id="volume-btn">
+                <i class="fas fa-volume-up"></i>
+            </button>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.3">
+        </div>
+    </div>
+
+    <!-- Background Music Audio Tag -->
+    <audio id="background-music" src="./IMG/music.mp3" loop preload="auto"></audio>
+
+    <script>
+        // --- Tarokka Card Data ---
+        // Full list of 54 Tarokka Cards with placeholder meanings.
+        // Paths are updated to point to the IMG folder in the root directory.
+        // Fallback to placehold.co if local images are not found.
+        const tarokkaCards = [
+            // High Deck (Major Arcana - 14 cards)
+            { id: 'artifact', name: 'The Artifact', suit: 'High', value: null, imageFront: './IMG/The Artifact.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome is the key to knowledge and understanding. It reveals secrets long buried and paths yet unseen. Seek wisdom within its ancient pages.', holySymbol: 'The holy symbol radiates divine power, offering protection against the forces of darkness. It is a beacon of hope in despair.', sunsword: 'The sunsword is a weapon of light, capable of piercing the deepest shadows. It represents courage and the will to fight evil.', ally: 'Your fated ally is a steadfast companion, offering strength and guidance when you need it most. Trust in their loyalty.', strahd: 'Strahd\'s location is a place of ancient sorrow and forgotten power. It is here that his influence is strongest, and his secrets most guarded.' } },
+            { id: 'beast', name: 'The Beast', suit: 'High', value: null, imageFront: './IMG/The Beast.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome reveals the primal nature of the beast within. It speaks of uncontrolled urges and untamed power.', holySymbol: 'The holy symbol offers solace from the beast\'s hunger, a shield against its raw, destructive force.', sunsword: 'The sunsword is the only means to confront the beast, to tame its fury or to strike it down.', ally: 'Your ally is one who has faced the beast and survived, or perhaps one who struggles with their own inner monster.', strahd: 'Strahd\'s location is a lair, a place where primal instincts are unleashed and where he indulges his darkest desires.' } },
+            { id: 'darklord', name: 'The Dark Master', suit: 'High', value: null, imageFront: './IMG/The Dark Master.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of the Darklord\'s history, his rise to power, and the curse that binds him.', holySymbol: 'The holy symbol offers a glimmer of hope against the Darklord\'s tyranny, a resistance to his evil.', sunsword: 'The sunsword is the ultimate weapon against the Darklord, capable of breaking his hold and freeing the land.', ally: 'Your ally is one who stands directly against the Darklord, perhaps a former victim or a long-time foe.', strahd: 'Strahd\'s location is his throne, the seat of his power, where he holds court over his domain.' } },
+            { id: 'ghost', name: 'The Spirit', suit: 'High', value: null, imageFront: './IMG/The Spirit.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome reveals the tragic tale of a lost soul, a ghost bound to Barovia by unfinished business or lingering sorrow.', holySymbol: 'The holy symbol can offer peace to the restless spirit, or protection from its spectral touch.', sunsword: 'The sunsword can cut through the ethereal veil, allowing interaction with the spectral realm, or laying spirits to rest.', ally: 'Your ally is a spectral guide, a benevolent spirit, or someone haunted by a past trauma.', strahd: 'Strahd\'s location is a place of echoes and memories, where the past lingers like a cold mist.' } },
+            { id: 'executioner', name: 'The Hangman', suit: 'High', value: null, imageFront: './IMG/The Hangman.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome details the laws of judgment and the consequences of transgression. It speaks of justice, swift and unyielding.', holySymbol: 'The holy symbol offers mercy or a chance for redemption in the face of harsh judgment.', sunsword: 'The sunsword can be used to deliver a final blow, or to defend the innocent from unjust punishment.', ally: 'A figure of authority, a judge, or someone who enforces order, even if brutally so.', strahd: 'Strahd\'s location is a place of punishment and suffering, where his enemies meet their grim end.' } },
+            { id: 'horseman', name: 'The Horseman', suit: 'High', value: null, imageFront: './IMG/The Horseman.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of journeys and distant lands, of the path ahead and the trials to come.', holySymbol: 'The holy symbol offers safe passage and protection on a perilous journey.', sunsword: 'The sunsword clears the way, cutting through obstacles and guiding the path forward.', ally: 'Your ally is a traveler, a scout, or someone who knows the hidden roads and trails.', strahd: 'Strahd\'s location is a place of transit, a crossroads, or a point from which he surveys his domain.' } },
+            { id: 'innkeeper', name: 'The Innocent', suit: 'High', value: null, imageFront: './IMG/The Innocent.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of hospitality and refuge, of secrets whispered in the common room and tales told by the fire.', holySymbol: 'The holy symbol offers sanctuary and comfort in a place of rest.', sunsword: 'The sunsword protects the innocent and ensures peace within the walls of a safe haven.', ally: 'A provider, a protector of travelers, or someone who offers a much-needed respite.', strahd: 'Strahd\'s location is a place of false comfort, a trap disguised as refuge, or where he observes his unsuspecting victims.' } },
+            { id: 'marionette', name: 'The Marionette', suit: 'High', value: null, imageFront: './IMG/The Marionette.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome reveals the strings of fate, the hidden manipulations and the lack of free will. It speaks of being controlled.', holySymbol: 'The holy symbol can break the bonds of enchantment and manipulation, freeing the mind and spirit.', sunsword: 'The sunsword cuts the strings that bind, severing control and allowing true action.', ally: 'Someone who has broken free from control, or one who sees the hidden influences at play.', strahd: 'Strahd\'s location is a place of control and subjugation, where he pulls the strings of his puppets.' } },
+            { id: 'mists', name: 'The Mists', suit: 'High', value: null, imageFront: './IMG/The Mists.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of the impenetrable fog that surrounds Barovia, and the secrets it holds within its swirling depths.', holySymbol: 'The holy symbol can part the mists, offering clarity and a glimpse of what lies beyond.', sunsword: 'The sunsword can cut a path through the mists, guiding the way through confusion and illusion.', ally: 'One who can navigate the mists, a guide through the unknown, or someone who understands its mysteries.', strahd: 'Strahd\'s location is hidden within the mists, a place obscured by illusion and difficult to reach.' } },
+            { id: 'raven', name: 'The Raven', suit: 'High', value: null, imageFront: './IMG/The Raven.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of ancient secrets and forgotten lore, often guarded by watchful eyes. It signifies a hidden truth.', holySymbol: 'The holy symbol offers insight and clarity, helping to discern truth from deception.', sunsword: 'The sunsword can reveal hidden paths or break through illusions, exposing what is concealed.', ally: 'A keeper of secrets, a wise elder, or one who has access to forbidden knowledge.', strahd: 'Strahd\'s location is a place of concealed knowledge, where he hides his most guarded secrets.' } },
+            { id: 'seer', name: 'The Hero', suit: 'High', value: null, imageFront: './IMG/The Hero.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of prophecy and destiny, of visions of the future and the unfolding of fate.', holySymbol: 'The holy symbol enhances perception, allowing one to see beyond the ordinary veil.', sunsword: 'The sunsword can cut through illusions and reveal the true nature of things, even future events.', ally: 'A visionary, a prophet, or someone with keen insight into the unseen.', strahd: 'Strahd\'s location is a place where he observes, where he can foresee events, or where he attempts to manipulate destiny.' } },
+            { id: 'tempter', name: 'The Temptress', suit: 'High', value: null, imageFront: './IMG/The Temptress.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of forbidden knowledge and dangerous allure, of choices that lead to ruin or power.', holySymbol: 'The holy symbol offers resistance to dark temptations and strengthens one\'s resolve.', sunsword: 'The sunsword can cut through deceptive appearances and expose the true nature of a tempting offer.', ally: 'One who has resisted temptation, or one who understands the nature of corruption.', strahd: 'Strahd\'s location is a place of allure and deceit, where he offers dark bargains and preys on weaknesses.' } },
+            { id: 'torturer', name: 'The Broken One', suit: 'High', value: null, imageFront: './IMG/The Broken One.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of suffering and endurance, of the limits of pain and the breaking of spirit.', holySymbol: 'The holy symbol offers solace in suffering and strength to endure torment.', sunsword: 'The sunsword can end suffering, either by delivering justice or by providing a swift release.', ally: 'One who has endured great pain, or one who seeks to alleviate the suffering of others.', strahd: 'Strahd\'s location is a dungeon, a torture chamber, or a place where he inflicts pain upon his victims.' } },
+            { id: 'broken_one', name: 'The Broken One', suit: 'High', value: null, imageFront: './IMG/The Broken One.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of shattered dreams and broken promises, of loss and the struggle for wholeness.', holySymbol: 'The holy symbol offers healing and restoration, mending what is broken.', sunsword: 'The sunsword can mend a fractured spirit or bring an end to a cycle of despair.', ally: 'One who is wounded but resilient, or one who helps others find healing.', strahd: 'Strahd\'s location is a place of ruin and despair, reflecting his own shattered existence.' } },
+            { id: 'donjon', name: 'The Prison', suit: 'High', value: null, imageFront: './IMG/The Prison.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of confinement and isolation, of being trapped and the struggle for freedom.', holySymbol: 'The holy symbol offers a way out, a key to release, or a beacon of hope in captivity.', sunsword: 'The sunsword can cut through barriers and break chains, leading to liberation.', ally: 'A prisoner, an escapee, or one who knows the ways out of confinement.', strahd: 'Strahd\'s location is a prison, a fortress, or a place from which there is no easy escape.' } },
+
+            // Common Deck (4 suits, 10 cards each - numbered 1-9 + Master)
+            // Swords (Scars) - 10 cards
+            { id: 'swords-1', name: 'Ace of Swords', suit: 'Swords', value: 1, imageFront: './IMG/Ace of Swords.png', imageBack: './IMG/back.png', meanings: { tome: 'A sharp truth or a sudden insight.', holySymbol: 'Protection from verbal attacks or harmful ideas.', sunsword: 'A decisive action or a quick resolution to conflict.', ally: 'A quick-witted and sharp-tongued individual.', strahd: 'A place of conflict, sharp words, or intellectual challenge.' } },
+            { id: 'swords-2', name: 'Two of Swords', suit: 'Swords', value: 2, imageFront: './IMG/Two of Swords.png', imageBack: './IMG/back.png', meanings: { tome: 'A dual nature or a difficult choice, often intellectual.', holySymbol: 'Balance and harmony in opposing forces.', sunsword: 'A duel or a challenge of two wills.', ally: 'Someone conflicted or with two sides to their nature.', strahd: 'A place of division or opposing forces, often a battleground.' } },
+            { id: 'swords-3', name: 'Three of Swords', suit: 'Swords', value: 3, imageFront: './IMG/Three of Swords.png', imageBack: './IMG/back.png', meanings: { tome: 'A painful truth or a difficult revelation.', holySymbol: 'Spiritual resilience in the face of harsh realities.', sunsword: 'A necessary but painful cut, or a surgical strike.', ally: 'One who delivers hard truths, or has suffered greatly.', strahd: 'A place of sorrow, loss, or painful memories.' } },
+            { id: 'swords-4', name: 'Four of Swords', suit: 'Swords', value: 4, imageFront: './IMG/Four of Swords.png', imageBack: './IMG/back.png', meanings: { tome: 'A period of truce, rest, or strategic pause.', holySymbol: 'Peace and calm amidst turmoil.', sunsword: 'A defensive stance or a fortified position.', ally: 'One who offers respite or a safe haven.', strahd: 'A place of temporary calm before a storm, or a strategic stronghold.' } },
+            { id: 'swords-5', name: 'Five of Swords', suit: 'Swords', value: 5, imageFront: './IMG/Five of Swords.png', imageBack: './IMG/back.png', meanings: { tome: 'A hollow victory, defeat, or intellectual struggle.', holySymbol: 'Spiritual strength to overcome setbacks.', sunsword: 'A battle lost or a Pyrrhic victory.', ally: 'One who has faced defeat but learned from it.', strahd: 'A place of past defeats or where he has overcome rivals.' } },
+            { id: 'swords-6', name: 'Six of Swords', suit: 'Swords', value: 6, imageFront: './IMG/Six of Swords.png', imageBack: './IMG/back.png', meanings: { tome: 'A journey away from conflict, or moving on from a difficult situation.', holySymbol: 'Guidance through troubled waters, or safe passage.', sunsword: 'A strategic retreat or a path to safety.', ally: 'One who helps others escape or find new beginnings.', strahd: 'A hidden escape route or a place of no return.' } },
+            { id: 'swords-7', name: 'Seven of Swords', suit: 'Swords', value: 7, imageFront: './IMG/Seven of Swords.png', imageBack: './IMG/back.png', meanings: { tome: 'Deception, trickery, or hidden agendas.', holySymbol: 'Discernment to see through illusions.', sunsword: 'A weapon to expose lies or break enchantments.', ally: 'A cunning individual, or one who uncovers secrets.', strahd: 'A place of illusion, trickery, or hidden traps.' } },
+            { id: 'swords-8', name: 'Eight of Swords', suit: 'Swords', value: 8, imageFront: './IMG/Eight of Swords.png', imageBack: './IMG/back.png', meanings: { tome: 'Feeling trapped or restricted by one\'s own thoughts or circumstances.', holySymbol: 'Spiritual liberation from self-imposed limitations.', sunsword: 'A tool to cut through mental or physical binds.', ally: 'One who helps others find freedom, or is themselves constrained.', strahd: 'A place of mental anguish or psychological torment.' } },
+            { id: 'swords-9', name: 'Nine of Swords', suit: 'Swords', value: 9, imageFront: './IMG/Nine of Swords.png', imageBack: './IMG/back.png', meanings: { tome: 'Anxiety, despair, or profound mental anguish.', holySymbol: 'Comfort and solace in times of great distress.', sunsword: 'A desperate last stand, or the end of suffering.', ally: 'One who offers comfort or understands deep sorrow.', strahd: 'A place of nightmares and profound suffering.' } },
+            { id: 'swords-master', name: 'Ten of Swords', suit: 'Swords', value: 10, imageFront: './IMG/Ten of Swords.png', imageBack: './IMG/back.png', meanings: { tome: 'Mastery over conflict, strategic insight, or intellectual prowess.', holySymbol: 'Ultimate spiritual fortitude and protection.', sunsword: 'Absolute victory, a final decisive strike, or military genius.', ally: 'A master of combat, strategy, or a skilled warrior.', strahd: 'Where his military might or strategic genius is most evident.' } },
+
+            // Coins (Coins) - 10 cards
+            { id: 'coins-1', name: 'Ace of Coins', suit: 'Coins', value: 1, imageFront: './IMG/Ace of Coins.png', imageBack: './IMG/back.png', meanings: { tome: 'A new opportunity, a fresh start in material wealth or resources.', holySymbol: 'Blessings for new ventures and prosperity.', sunsword: 'A tool to acquire new resources or defend existing wealth.', ally: 'A benefactor, a merchant, or someone who brings good fortune.', strahd: 'A place of hidden treasures or material gain.' } },
+            { id: 'coins-2', name: 'Two of Coins', suit: 'Coins', value: 2, imageFront: './IMG/Two of Coins.png', imageBack: './IMG/back.png', meanings: { tome: 'Financial balance, partnership, or careful management of resources.', holySymbol: 'Harmony in material affairs.', sunsword: 'A fair exchange or a balanced transaction.', ally: 'A reliable partner in business or trade.', strahd: 'A place of negotiation or uneasy alliances concerning wealth.' } },
+            { id: 'coins-3', name: 'Three of Coins', suit: 'Coins', value: 3, imageFront: './IMG/Three of Coins.png', imageBack: './IMG/back.png', meanings: { tome: 'Growth, collaboration, or building a foundation for future prosperity.', holySymbol: 'Divine blessing on creative endeavors.', sunsword: 'A tool for construction or or establishing a secure base.', ally: 'A skilled artisan, builder, or a supportive team member.', strahd: 'A place where his projects are underway, or where he consolidates power.' } },
+            { id: 'coins-4', name: 'Four of Coins', suit: 'Coins', value: 4, imageFront: './IMG/Four of Coins.png', imageBack: './IMG/back.png', meanings: { tome: 'Stability, security, but also possessiveness or stagnation.', holySymbol: 'Spiritual grounding and protection of what is sacred.', sunsword: 'A defense of territory or possessions.', ally: 'A guardian, a collector, or someone resistant to change.', strahd: 'A heavily guarded vault or a place where he hoards his possessions.' } },
+            { id: 'coins-5', name: 'Five of Coins', suit: 'Coins', value: 5, imageFront: './IMG/Five of Coins.png', imageBack: './IMG/back.png', meanings: { tome: 'Loss, poverty, or material hardship.', holySymbol: 'Charity and compassion, or finding spiritual wealth in adversity.', sunsword: 'A desperate struggle for survival or a last resort.', ally: 'One who is destitute, or one who offers aid to the needy.', strahd: 'A place of destitution, suffering, or where he takes from others.' } },
+            { id: 'coins-6', name: 'Six of Coins', suit: 'Coins', value: 6, imageFront: './IMG/Six of Coins.png', imageBack: './IMG/back.png', meanings: { tome: 'Generosity, giving and receiving, or debt.', holySymbol: 'Divine grace and the flow of blessings.', sunsword: 'A fair distribution of resources or a just reward.', ally: 'A benefactor, a philanthropist, or someone who gives freely.', strahd: 'A place where he demands tribute or doles out favors.' } },
+            { id: 'coins-7', name: 'Seven of Coins', suit: 'Coins', value: 7, imageFront: './IMG/Seven of Coins.png', imageBack: './IMG/back.png', meanings: { tome: 'Patience, investment, or waiting for results. Sometimes disappointment.', holySymbol: 'Trust in divine timing and spiritual growth.', sunsword: 'A long-term project or a patient siege.', ally: 'A diligent worker, a farmer, or one who waits for the right moment.', strahd: 'A place where he cultivates his plans, or where patience is required.' } },
+            { id: 'coins-8', name: 'Eight of Coins', suit: 'Coins', value: 8, imageFront: './IMG/Eight of Coins.png', imageBack: './IMG/back.png', meanings: { tome: 'Skill, craftsmanship, or dedication to one\'s work.', holySymbol: 'Divine inspiration for creative endeavors.', sunsword: 'A finely crafted weapon or a tool of great precision.', ally: 'A master artisan, a dedicated student, or a skilled laborer.', strahd: 'A workshop, a laboratory, or where he perfects his dark arts.' } },
+            { id: 'coins-9', name: 'Nine of Coins', suit: 'Coins', value: 9, imageFront: './IMG/Nine of Coins.png', imageBack: './IMG/back.png', meanings: { tome: 'Abundance, self-sufficiency, or material comfort.', holySymbol: 'Spiritual fulfillment and inner peace.', sunsword: 'A reward for hard work or a secure, prosperous position.', ally: 'A successful individual, or one who enjoys their independence.', strahd: 'A place of luxury and self-indulgence, or where he enjoys his conquests.' } },
+            { id: 'coins-master', name: 'Ten of Coins', suit: 'Coins', value: 10, imageFront: './IMG/Ten of Coins.png', imageBack: './IMG/back.png', meanings: { tome: 'Ultimate financial security, profound understanding of resources, or shrewd business.', holySymbol: 'Abundant blessings and lasting prosperity.', sunsword: 'Securing vast wealth or protecting an empire of resources.', ally: 'A powerful patron, a master of commerce, or a wealthy individual.', strahd: 'His treasury, or where his vast wealth and influence are stored.' } },
+
+            // Stars (Glyphs) - 10 cards
+            { id: 'stars-1', name: 'Ace of Glyphs', suit: 'Stars', value: 1, imageFront: './IMG/Ace of Glyphs.png', imageBack: './IMG/back.png', meanings: { tome: 'A guiding light, new hope, or inspiration in the darkness.', holySymbol: 'Illumination of the path and spiritual guidance.', sunsword: 'Shining brightly, revealing the way forward even in confusion.', ally: 'An inspiring figure, a beacon of hope, or a dream guide.', strahd: 'A place where hope is scarce, or where his dark influence eclipses all light.' } },
+            { id: 'stars-2', name: 'Two of Glyphs', suit: 'Stars', value: 2, imageFront: './IMG/Two of Glyphs.png', imageBack: './IMG/back.png', meanings: { tome: 'Intuition, mystery, or hidden knowledge. Often deception or illusion.', holySymbol: 'Enhanced perception, seeing beyond the ordinary veil.', sunsword: 'Cutting through illusions and revealing the true nature of things.', ally: 'One who is intuitive, secretive, or deals with the unseen.', strahd: 'A place of illusion, dreams, or where reality is distorted.' } },
+            { id: 'stars-3', name: 'Three of Glyphs', suit: 'Stars', value: 3, imageFront: './IMG/Three of Glyphs.png', imageBack: './IMG/back.png', meanings: { tome: 'Creative expression, intuition, or the unfolding of inner visions.', holySymbol: 'Divine inspiration for artistic or magical endeavors.', sunsword: 'Bringing ideas into reality, or manifesting desires.', ally: 'An artist, a visionary, or someone who inspires creativity.', strahd: 'A place where dark rituals are performed, or where he manifests his will.' } },
+            { id: 'stars-4', name: 'Four of Glyphs', suit: 'Stars', value: 4, imageFront: './IMG/Four of Glyphs.png', imageBack: './IMG/back.png', meanings: { tome: 'Stability in magic, or a structured approach to the unknown.', holySymbol: 'Spiritual discipline and control over mystical forces.', sunsword: 'A magical defense or a stable arcane foundation.', ally: 'A disciplined spellcaster or one who brings order to chaos.', strahd: 'A place of powerful magical wards or a controlled arcane environment.' } },
+            { id: 'stars-5', name: 'Five of Glyphs', suit: 'Stars', value: 5, imageFront: './IMG/Five of Glyphs.png', imageBack: './IMG/back.png', meanings: { tome: 'Spiritual crisis, loss of faith, or disillusionment.', holySymbol: 'Reclaiming faith and finding spiritual resilience.', sunsword: 'A challenge to one\'s beliefs or a test of magical prowess.', ally: 'One who has lost their way, or one who helps others find faith.', strahd: 'A place where faith is tested, or where he seeks to corrupt spirits.' } },
+            { id: 'stars-6', name: 'Six of Glyphs', suit: 'Stars', value: 6, imageFront: './IMG/Six of Glyphs.png', imageBack: './IMG/back.png', meanings: { tome: 'Moving towards enlightenment, or a journey of spiritual growth.', holySymbol: 'Divine guidance on a spiritual path.', sunsword: 'A path cleared by magic, or a journey through mystical realms.', ally: 'A spiritual guide, a mentor, or one who has walked a similar path.', strahd: 'A hidden magical path, or a journey into darkness.' } },
+            { id: 'stars-7', name: 'Seven of Glyphs', suit: 'Stars', value: 7, imageFront: './IMG/Seven of Glyphs.png', imageBack: './IMG/back.png', meanings: { tome: 'Hidden truths, illusions, or choices in the realm of magic.', holySymbol: 'Clarity amidst confusion, or discerning true magic from trickery.', sunsword: 'A weapon to dispel illusions or reveal hidden magical effects.', ally: 'A master illusionist, or one who sees beyond the veil.', strahd: 'A place of powerful illusions or hidden magical secrets.' } },
+            { id: 'stars-8', name: 'Eight of Glyphs', suit: 'Stars', value: 8, imageFront: './IMG/Eight of Glyphs.png', imageBack: './IMG/back.png', meanings: { tome: 'Magical apprenticeship, study, or developing arcane skills.', holySymbol: 'Divine knowledge and understanding of the mystical.', sunsword: 'A tool for magical practice or a focus for spells.', ally: 'A student of magic, a researcher, or a dedicated apprentice.', strahd: 'A library of forbidden lore, or where he studies dark magic.' } },
+            { id: 'stars-9', name: 'Nine of Glyphs', suit: 9, imageFront: './IMG/Nine of Glyphs.png', imageBack: './IMG/back.png', meanings: { tome: 'Spiritual fulfillment, inner wisdom, or dreams realized.', holySymbol: 'Divine connection and profound spiritual insight.', sunsword: 'A magical achievement or the culmination of arcane power.', ally: 'A wise hermit, a spiritual guru, or one who has found inner peace.', strahd: 'A place of dark contemplation or where he seeks ultimate power.' } },
+            { id: 'stars-master', name: 'Ten of Glyphs', suit: 'Stars', value: 10, imageFront: './IMG/Ten of Glyphs.png', imageBack: './IMG/back.png', meanings: { tome: 'Cosmic wisdom, understanding of destiny, or profound magical insight.', holySymbol: 'Divine insight and cosmic protection.', sunsword: 'Aligning with celestial power, granting immense magical ability.', ally: 'A powerful mage, a celestial being, or one with deep arcane knowledge.', strahd: 'A nexus of immense arcane power, or where he seeks to control the very stars.' } },
+
+            // Glyphs (Scars) - 10 cards
+            { id: 'glyphs-1', name: 'Ace of Scars', suit: 'Glyphs', value: 1, imageFront: './IMG/Ace of Scars.png', imageBack: './IMG/back.png', meanings: { tome: 'A new spiritual beginning, enlightenment, or divine inspiration.', holySymbol: 'A powerful blessing or a fresh surge of faith.', sunsword: 'A path illuminated by divine light, or a clear moral choice.', ally: 'A pure-hearted individual, or one who brings hope.', strahd: 'A place where light struggles against darkness, or where he seeks to corrupt innocence.' } },
+            { id: 'glyphs-2', name: 'Two of Scars', suit: 'Glyphs', value: 2, imageFront: './IMG/Two of Scars.png', imageBack: './IMG/back.png', meanings: { tome: 'Spiritual partnership, shared beliefs, or a choice between two paths of faith.', holySymbol: 'Harmony in spiritual endeavors.', sunsword: 'A shared purpose or a unified front against evil.', ally: 'A devout companion, or one who shares your spiritual journey.', strahd: 'A place where spiritual beliefs clash, or where he seeks to divide faiths.' } },
+            { id: 'glyphs-3', name: 'Three of Scars', suit: 'Glyphs', value: 3, imageFront: './IMG/Three of Scars.png', imageBack: './IMG/back.png', meanings: { tome: 'Celebration, community, or spiritual gathering.', holySymbol: 'Divine blessing on communal efforts.', sunsword: 'A joyous victory or a shared triumph over adversity.', ally: 'A leader of a community, or one who fosters unity.', strahd: 'A place of dark celebration or a gathering of his loyal servants.' } },
+            { id: 'glyphs-4', name: 'Four of Scars', suit: 'Glyphs', value: 4, imageFront: './IMG/Four of Scars.png', imageBack: './IMG/back.png', meanings: { tome: 'Spiritual foundation, tradition, or conservative beliefs.', holySymbol: 'Unwavering faith and divine protection of sacred traditions.', sunsword: 'A strong defense of principles or a fortified spiritual position.', ally: 'A traditionalist, an elder, or one who upholds ancient customs.', strahd: 'A place of ancient traditions he seeks to corrupt, or a stronghold of his dark faith.' } },
+            { id: 'glyphs-5', name: 'Five of Scars', suit: 'Glyphs', value: 5, imageFront: './IMG/Five of Scars.png', imageBack: './IMG/back.png', meanings: { tome: 'Spiritual conflict, loss of faith, or moral crisis.', holySymbol: 'Guidance through spiritual trials and renewed faith.', sunsword: 'A test of conviction or a challenge to one\'s beliefs.', ally: 'One who has faced and overcome a spiritual crisis.', strahd: 'A place of spiritual despair or where faith is shattered.' } },
+            { id: 'glyphs-6', name: 'Six of Scars', suit: 'Glyphs', value: 6, imageFront: './IMG/Six of Scars.png', imageBack: './IMG/back.png', meanings: { tome: 'Nostalgia, healing from the past, or returning to spiritual roots.', holySymbol: 'Divine comfort and reconciliation.', sunsword: 'A journey of healing or a return to a place of spiritual significance.', ally: 'One who brings comfort, or helps reconcile past grievances.', strahd: 'A place of lingering regret or where he seeks to twist past memories.' } },
+            { id: 'glyphs-7', name: 'Seven of Scars', suit: 'Glyphs', value: 7, imageFront: './IMG/Seven of Scars.png', imageBack: './IMG/back.png', meanings: { tome: 'Spiritual temptation, hidden motives, or choices of faith.', holySymbol: 'Discernment to see through spiritual deceit.', sunsword: 'A weapon to expose hypocrisy or false prophets.', ally: 'One who tests faith, or reveals hidden truths.', strahd: 'A place of false worship or where he preys on spiritual weakness.' } },
+            { id: 'glyphs-8', name: 'Eight of Scars', suit: 'Glyphs', value: 8, imageFront: './IMG/Eight of Scars.png', imageBack: './IMG/back.png', meanings: { tome: 'Spiritual discipline, introspection, or seeking deeper meaning.', holySymbol: 'Divine wisdom and profound spiritual understanding.', sunsword: 'A tool for self-mastery or a focused spiritual quest.', ally: 'A hermit, a monk, or one who seeks solitude for spiritual growth.', strahd: 'A place of dark contemplation or where he seeks forbidden knowledge.' } },
+            { id: 'glyphs-9', name: 'Nine of Scars', suit: 'Glyphs', value: 9, imageFront: './IMG/Nine of Scars.png', imageBack: './IMG/back.png', meanings: { tome: 'Spiritual enlightenment, fulfillment, or divine blessing.', holySymbol: 'Profound spiritual connection and inner radiance.', sunsword: 'A beacon of hope and light, or a divine intervention.', ally: 'A saintly figure, a healer, or one who radiates positive energy.', strahd: 'A place where he attempts to extinguish all hope and light.' } },
+            { id: 'glyphs-master', name: 'Ten of Scars', suit: 'Glyphs', value: 10, imageFront: './IMG/Ten of Scars.png', imageBack: './IMG/back.png', meanings: { tome: 'Profound spiritual knowledge, divine guidance, or ultimate faith.', holySymbol: 'Absolute divine protection and spiritual power.', sunsword: 'A weapon of holy vengeance or ultimate spiritual authority.', ally: 'A powerful cleric, a spiritual leader, or a divine agent.', strahd: 'A nexus of dark magic, where his most potent spells are woven.' } },
+
+            // Face Cards (4 suits, 3 cards each - 12 cards total)
+            // Assign these to specific suits
+            { id: 'warrior', name: 'Warrior', suit: 'Swords', value: null, imageFront: './IMG/Warrior.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of courage and martial prowess.', holySymbol: 'The holy symbol offers divine protection in battle.', sunsword: 'The sunsword is wielded by a true warrior.', ally: 'Your ally is a skilled combatant.', strahd: 'Strahd\'s location is a place of battle or military might.' } },
+            { id: 'rogue', name: 'Rogue', suit: 'Coins', value: null, imageFront: './IMG/Rogue.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome reveals hidden paths and cunning strategies.', holySymbol: 'The holy symbol offers stealth and protection from detection.', sunsword: 'The sunsword can bypass defenses or strike from the shadows.', ally: 'Your ally is cunning and agile, a master of shadows.', strahd: 'Strahd\'s location is a place of intrigue, hidden passages, or traps.' } },
+            { id: 'mage', name: 'Mage', suit: 'Stars', value: null, imageFront: './IMG/Mage.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of arcane secrets and powerful spells.', holySymbol: 'The holy symbol offers protection against dark magic.', sunsword: 'The sunsword channels raw magical energy.', ally: 'Your ally is a powerful spellcaster.', strahd: 'Strahd\'s location is a place of immense magical power.' } },
+            { id: 'priest', name: 'Priest', suit: 'Glyphs', value: null, imageFront: './IMG/Priest.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome reveals divine knowledge and sacred rituals.', holySymbol: 'The holy symbol offers profound spiritual healing and protection.', sunsword: 'The sunsword is blessed with divine power.', ally: 'Your ally is a devout and wise spiritual leader.', strahd: 'Strahd\'s location is a place of corrupted faith or unholy rituals.' } },
+
+            { id: 'knight', name: 'Knight', suit: 'Swords', value: null, imageFront: './IMG/Knight.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of chivalry and duty.', holySymbol: 'The holy symbol offers righteous protection.', sunsword: 'The sunsword is wielded by a noble defender.', ally: 'Your ally is a brave and honorable knight.', strahd: 'Strahd\'s location is a place of fallen heroes or broken oaths.' } },
+            { id: 'thief', name: 'Thief', suit: 'Coins', value: null, imageFront: './IMG/Thief.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome reveals hidden stashes and illicit dealings.', holySymbol: 'The holy symbol offers a way to reclaim stolen goods.', sunsword: 'The sunsword can cut through locks or sever connections to ill-gotten gains.', ally: 'Your ally is resourceful and skilled in acquiring what is needed.', strahd: 'Strahd\'s location is a place of ill-gotten wealth or stolen artifacts.' } },
+            { id: 'wizard', name: 'Wizard', suit: 'Stars', value: null, imageFront: './IMG/Wizard.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of ancient spells and forgotten lore.', holySymbol: 'The holy symbol offers protection against dark enchantments.', sunsword: 'The sunsword can channel immense magical power.', ally: 'Your ally is a wise and powerful wizard.', strahd: 'Strahd\'s location is a library of forbidden magic or a wizard\'s tower.' } },
+            { id: 'cleric', name: 'Cleric', suit: 'Glyphs', value: null, imageFront: './IMG/Cleric.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome reveals divine revelations and sacred texts.', holySymbol: 'The holy symbol offers profound healing and spiritual guidance.', sunsword: 'The sunsword is imbued with holy power.', ally: 'Your ally is a devoted and compassionate cleric.', strahd: 'Strahd\'s location is a desecrated shrine or a place of twisted faith.' } },
+
+            { id: 'paladin', name: 'Paladin', suit: 'Swords', value: null, imageFront: './IMG/Paladin.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of righteous crusades and sacred oaths.', holySymbol: 'The holy symbol offers unwavering divine protection and justice.', sunsword: 'The sunsword is a weapon of pure divine light against evil.', ally: 'Your ally is a zealous and unyielding paladin.', strahd: 'Strahd\'s location is a place where good has been corrupted or a holy site defiled.' } },
+            { id: 'bard', name: 'Bard', suit: 'Coins', value: null, imageFront: './IMG/Bard.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of inspiring tales and forgotten songs.', holySymbol: 'The holy symbol offers solace through art and performance.', sunsword: 'The sunsword can inspire allies or dishearten foes with its presence.', ally: 'Your ally is a charismatic storyteller or a master of song.', strahd: 'Strahd\'s location is a place of twisted entertainment or forced revelry.' } },
+            { id: 'sorcerer', name: 'Sorcerer', suit: 'Stars', value: null, imageFront: './IMG/Sorcerer.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of innate magical talent and raw power.', holySymbol: 'The holy symbol offers control over wild magic.', sunsword: 'The sunsword can channel untamed arcane energy.', ally: 'Your ally possesses powerful innate magical abilities.', strahd: 'Strahd\'s location is a place where raw magic runs wild or is dangerously contained.' } },
+            { id: 'druid', name: 'Druid', suit: 'Glyphs', value: null, imageFront: './IMG/Druid.png', imageBack: './IMG/back.png', meanings: { tome: 'The tome speaks of natural cycles and ancient wilderness lore.', holySymbol: 'The holy symbol offers connection to nature and its healing powers.', sunsword: 'The sunsword can restore natural balance or cut through unnatural growth.', ally: 'Your ally is a protector of nature or a shapeshifter.', strahd: 'Strahd\'s location is a corrupted natural site or a twisted grove.' } },
+        ];
+
+        // Ensure there are exactly 54 cards for a full deck simulation
+        // This loop will fill any missing cards with duplicates if the array is manually shortened,
+        // or trim it if it's accidentally lengthened.
+        while (tarokkaCards.length < 54) {
+            tarokkaCards.push(tarokkaCards[Math.floor(Math.random() * tarokkaCards.length)]);
+        }
+        if (tarokkaCards.length > 54) {
+            tarokkaCards.splice(54);
+        }
+
+
+        // --- Global Variables ---
+        let currentDeck = [...tarokkaCards]; // Working copy of the deck
+        let dealtCards = {
+            tome: null,
+            holySymbol: null,
+            sunsword: null,
+            ally: null,
+            strahd: null
+        };
+        const fortunePositions = ['tome', 'holySymbol', 'sunsword', 'ally', 'strahd'];
+        let isDmPanelVisible = false; // State for DM panel visibility
+        let isCastModeActive = false; // State for Cast mode
+
+        // --- DOM Elements ---
+        const preloader = document.getElementById('preloader');
+        const backgroundTable = document.getElementById('background-table');
+        const mainGameView = document.getElementById('main-game-view');
+
+        // Main Game View elements
+        const cardSpreadContainer = document.getElementById('card-spread-container');
+        const fortuneDisplay = document.getElementById('fortune-display');
+        const prophecyLog = document.getElementById('prophecy-log');
+        const logEntriesContainer = document.getElementById('log-entries');
+        const candleLightSource = document.getElementById('candle-light-source');
+
+        // DM Interface Container elements
+        const dmInterfaceContainer = document.getElementById('dm-interface-container');
+        const dmControlPanel = document.getElementById('dm-control-panel');
+        const currentReadingList = document.getElementById('current-reading-list');
+        const castToPlayersBtn = document.getElementById('cast-to-players-btn');
+
+        // Buttons
+        const toggleDmBtn = document.getElementById('toggle-dm-btn');
+        const randomizeAllBtn = document.getElementById('randomize-all-btn');
+        const shuffleDealBtn = document.getElementById('shuffle-deal-btn');
+        const revealAllBtn = document.getElementById('reveal-all-btn');
+        const hideAllBtn = document.getElementById('hide-all-btn');
+        const printHandoutBtn = document.getElementById('print-handout-btn');
+        const saveReadingBtn = document.getElementById('save-reading-btn');
+        const loadReadingBtn = document.getElementById('load-reading-btn');
+        const patreonBtn = document.getElementById('patreon-btn'); // New Patreon button
+        const volumeBtn = document.getElementById('volume-btn'); // Volume button
+        const volumeSlider = document.getElementById('volume-slider'); // Volume slider
+        const backgroundMusic = document.getElementById('background-music'); // Audio element
+
+
+        // ESC Indicator
+        const escIndicator = document.getElementById('esc-indicator');
+
+
+        // --- Utility Functions ---
+
+        /**
+         * Fisher-Yates (Knuth) Shuffle algorithm.
+         * @param {Array} array - The array to shuffle.
+         * @returns {Array} - The shuffled array.
+         */
+        function shuffleArray(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex !== 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [
+                    array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        /**
+         * Creates and appends a dust mote to the specified container.
+         */
+        function createDustMote() {
+            const dustMotesContainer = document.querySelector('.dust-motes');
+            const mote = document.createElement('div');
+            mote.classList.add('dust-mote');
+            const size = Math.random() * 3 + 1; // 1 to 4px
+            mote.style.width = `${size}px`;
+            mote.style.height = `${size}px`;
+            mote.style.left = `${Math.random() * 100}%`;
+            mote.style.top = `${Math.random() * 100}%`;
+            mote.style.animationDelay = `-${Math.random() * 10}s`; // Stagger animation start
+            dustMotesContainer.appendChild(mote);
+        }
+
+        /**
+         * Initializes dust motes.
+         */
+        function initDustMotes(count = 50) {
+            for (let i = 0; i < count; i++) {
+                createDustMote();
+            }
+        }
+
+        /**
+         * Creates a visual representation of a card.
+         * @param {Object} cardData - The card object from tarokkaCards.
+         * @param {boolean} isFlipped - Whether the card should be shown face up.
+         * @returns {HTMLElement} - The card DOM element.
+         */
+        function createCardElement(cardData, isFlipped = false) {
+            const card = document.createElement('div');
+            card.classList.add('card');
+            card.dataset.cardId = cardData.id;
+            card.dataset.position = ''; // Will be set when dealt
+
+            const cardFront = document.createElement('div');
+            cardFront.classList.add('card-face', 'card-front');
+            // Attempt to load local image, fallback to placeholder if not found or broken
+            const frontImage = new Image();
+            frontImage.onload = () => {
+                cardFront.style.backgroundImage = `url('${cardData.imageFront}')`;
+            };
+            frontImage.onerror = () => {
+                cardFront.style.backgroundImage = `url('https://placehold.co/110x190/333333/FFFFFF?text=${cardData.name.replace(/ /g, '+')}')`;
+            };
+            frontImage.src = cardData.imageFront;
+
+
+            const cardBack = document.createElement('div');
+            cardBack.classList.add('card-face', 'card-back');
+            // Attempt to load local image, fallback to placeholder if not found or broken
+            const backImage = new Image();
+            backImage.onload = () => {
+                cardBack.style.backgroundImage = `url('${cardData.imageBack}')`;
+            };
+            backImage.onerror = () => {
+                cardBack.style.backgroundImage = `url('https://placehold.co/110x190/3A1F1F/B8860B?text=Tarokka+Back+Ornate')`;
+            };
+            backImage.src = cardData.imageBack;
+
+
+            card.appendChild(cardFront);
+            card.appendChild(cardBack);
+
+            if (isFlipped) {
+                card.classList.add('flipped');
+            }
+
+            return card;
+        }
+
+        /**
+         * Renders the initial empty card positions.
+         */
+        function renderEmptyCardPositions() {
+            fortunePositions.forEach(pos => {
+                const positionDiv = document.getElementById(`position-${pos}`);
+                if (positionDiv) {
+                    positionDiv.innerHTML = ''; // Clear previous content
+                    positionDiv.classList.remove('has-card'); // Ensure no card class
+                }
+            });
+        }
+
+        /**
+         * Deals cards to the specified positions.
+         * @param {Object} cardsToDeal - An object mapping position names to card objects.
+         * @param {boolean} animate - Whether to show a dealing animation.
+         */
+        async function dealCards(cardsToDeal, animate = true) {
+            // Clear existing cards
+            renderEmptyCardPositions();
+            hideAllFortunes(); // Hide fortune display
+            clearProphecyLog(); // Clear prophecy log on new deal
+
+            for (const pos of fortunePositions) {
+                const cardData = cardsToDeal[pos];
+                if (cardData) {
+                    const positionDiv = document.getElementById(`position-${pos}`);
+                    positionDiv.classList.add('has-card');
+
+                    const cardElement = createCardElement(cardData, false); // Start face down
+                    cardElement.dataset.position = pos; // Link card to its position
+
+                    // Add click listener for card flipping
+                    cardElement.addEventListener('click', () => {
+                        // Cards are now always clickable, regardless of cast mode.
+                        if (!cardElement.classList.contains('flipped')) {
+                            flipCard(cardElement, cardData, pos);
+                        }
+                    });
+
+                    positionDiv.appendChild(cardElement);
+
+                    if (animate) {
+                        cardElement.style.transition = 'none';
+                        cardElement.style.opacity = '0';
+                        cardElement.style.transform = 'translateY(-20px)';
+                        await new Promise(resolve => setTimeout(resolve, 100)); // Stagger deal
+                        cardElement.style.opacity = '1';
+                        cardElement.style.transform = 'translateY(0)';
+                        setTimeout(() => {
+                            cardElement.style.transition = ''; // Reset to CSS defined transition
+                        }, 500);
+                    }
+                }
+            }
+            dealtCards = cardsToDeal; // Update global state
+            updateCurrentReadingDisplay(); // Update DM panel display
+        }
+
+        /**
+         * Flips a card and displays its meaning.
+         * @param {HTMLElement} cardElement - The card DOM element.
+         * @param {Object} cardData - The card object.
+         * @param {string} positionName - The name of the fortune position (e.g., 'tome').
+         */
+        function flipCard(cardElement, cardData, positionName) {
+            if (cardElement.classList.contains('flipped')) {
+                return; // Already flipped
+            }
+            console.log(`Flipping card: ${cardData.name} at ${positionName}`); // Debugging log
+            cardElement.classList.add('flipped');
+            displayFortune(cardData, positionName);
+            addEntryToProphecyLog(cardData, positionName);
+        }
+
+        /**
+         * Displays the fortune text for a revealed card.
+         * @param {Object} cardData - The card object.
+         * @param {string} positionName - The name of the fortune position.
+         */
+        function displayFortune(cardData, positionName) {
+            const fortuneText = cardData.meanings[positionName] || 'No specific fortune for this position.';
+            const positionTitle = positionName.charAt(0).toUpperCase() + positionName.slice(1); // Capitalize
+
+            let fortuneEntry = fortuneDisplay.querySelector(`#fortune-entry-${positionName}`);
+            if (!fortuneEntry) {
+                fortuneEntry = document.createElement('div');
+                fortuneEntry.id = `fortune-entry-${positionName}`;
+                fortuneEntry.classList.add('fortune-entry', 'opacity-0'); // Start hidden for fade-in
+                fortuneDisplay.appendChild(fortuneEntry);
+            }
+
+            fortuneEntry.innerHTML = `
+                <h3 class="text-xl font-bold">${positionTitle}: ${cardData.name}</h3>
+                <p>${fortuneText}</p>
+            `;
+            fortuneEntry.style.transition = 'opacity 0.5s ease-in-out';
+            setTimeout(() => fortuneEntry.classList.remove('opacity-0'), 50); // Fade in
+
+            fortuneDisplay.classList.add('active');
+        }
+
+        /**
+         * Hides all fortune text.
+         */
+        function hideAllFortunes() {
+            if (fortuneDisplay) {
+                fortuneDisplay.classList.remove('active');
+                setTimeout(() => {
+                    fortuneDisplay.innerHTML = '';
+                    Array.from(fortuneDisplay.children).forEach(child => child.classList.add('opacity-0'));
+                }, 500);
+            }
+        }
+
+        /**
+         * Populates the DM rigging dropdowns with all card options.
+         */
+        function populateRiggingDropdowns() {
+            fortunePositions.forEach(pos => {
+                const selectElement = document.getElementById(`rig-${pos}`);
+                if (selectElement) {
+                    selectElement.innerHTML = '<option value="">-- Random --</option>'; // Default option
+                    tarokkaCards.forEach(card => {
+                        const option = document.createElement('option');
+                        option.value = card.id;
+                        option.textContent = `${card.name} (${card.suit})`;
+                        selectElement.appendChild(option);
+                    });
+
+                    // Add event listener for rigging
+                    selectElement.addEventListener('change', (event) => {
+                        const selectedCardId = event.target.value;
+                        const position = event.target.dataset.position;
+                        const cardData = tarokkaCards.find(c => c.id === selectedCardId);
+                        dealtCards[position] = cardData || null; // Update dealtCards directly
+                        updateCurrentReadingDisplay(); // Update DM panel display immediately
+                    });
+                }
+            });
+        }
+
+        /**
+         * Updates the "Current Reading" display in the DM panel.
+         */
+        function updateCurrentReadingDisplay() {
+            if (currentReadingList) {
+                currentReadingList.innerHTML = '';
+                fortunePositions.forEach(pos => {
+                    const card = dealtCards[pos];
+                    const listItem = document.createElement('li');
+                    if (card) {
+                        listItem.innerHTML = `<strong>${pos.charAt(0).toUpperCase() + pos.slice(1)}:</strong> <span>${card.name}</span>`;
+                    } else {
+                        listItem.innerHTML = `<strong>${pos.charAt(0).toUpperCase() + pos.slice(1)}:</strong> <span>(Not set)</span>`;
+                    }
+                    currentReadingList.appendChild(listItem);
+                });
+            }
+        }
+
+        /**
+         * Adds an entry to the Prophecy Log sidebar.
+         * @param {Object} cardData - The card object.
+         * @param {string} positionName - The name of the fortune position.
+         */
+        function addEntryToProphecyLog(cardData, positionName) {
+            if (logEntriesContainer) {
+                const logEntry = document.createElement('div');
+                logEntry.classList.add('log-entry', 'opacity-0');
+
+                const cardThumbnail = document.createElement('div');
+                cardThumbnail.classList.add('card-thumbnail');
+                const thumbImage = new Image();
+                thumbImage.onload = () => { cardThumbnail.style.backgroundImage = `url('${cardData.imageFront}')`; };
+                thumbImage.onerror = () => { cardThumbnail.style.backgroundImage = `url('https://placehold.co/110x190/333333/FFFFFF?text=Thumb')`; };
+                thumbImage.src = cardData.imageFront;
+
+                const logText = document.createElement('div');
+                logText.classList.add('log-text');
+                logText.innerHTML = `
+                    <strong>${positionName.charAt(0).toUpperCase() + positionName.slice(1)}:</strong>
+                    <span>${cardData.name}</span>
+                `;
+
+                logEntry.appendChild(cardThumbnail);
+                logEntry.appendChild(logText);
+                logEntriesContainer.appendChild(logEntry);
+                logEntriesContainer.scrollTop = logEntriesContainer.scrollHeight;
+                setTimeout(() => logEntry.classList.remove('opacity-0'), 50);
+            }
+        }
+
+        /**
+         * Clears all entries from the Prophecy Log sidebar.
+         */
+        function clearProphecyLog() {
+            if (logEntriesContainer) {
+                logEntriesContainer.innerHTML = '';
+            }
+        }
+
+        /**
+         * Handles the "Shuffle & Deal" action.
+         */
+        async function handleShuffleAndDeal() {
+            currentDeck = shuffleArray([...tarokkaCards]); // Reshuffle the full deck
+
+            const newDealtCards = {};
+            const availableCards = [...currentDeck]; // Use a copy of the shuffled deck
+
+            // Get rigged cards directly from the dropdowns
+            const riggedSelections = {};
+            fortunePositions.forEach(pos => {
+                const selectElement = document.getElementById(`rig-${pos}`);
+                if (selectElement && selectElement.value) {
+                    riggedSelections[pos] = selectElement.value;
+                }
+            });
+
+            for (const pos of fortunePositions) {
+                const riggedCardId = riggedSelections[pos];
+                if (riggedCardId) {
+                    const riggedCardIndex = availableCards.findIndex(card => card.id === riggedCardId);
+                    if (riggedCardIndex !== -1) {
+                        newDealtCards[pos] = availableCards.splice(riggedCardIndex, 1)[0];
+                    } else {
+                        // If rigged card is not found (e.g., already used or invalid), pick random
+                        newDealtCards[pos] = availableCards.pop();
+                    }
+                } else {
+                    newDealtCards[pos] = availableCards.pop();
+                }
+            }
+
+            await dealCards(newDealtCards, true); // Deal with animation
+            hideAllFortunes(); // Ensure fortunes are hidden initially
+        }
+
+        /**
+         * Handles "Randomize All" button.
+         */
+        function handleRandomizeAll() {
+            fortunePositions.forEach(pos => {
+                const selectElement = document.getElementById(`rig-${pos}`);
+                if (selectElement) {
+                    selectElement.value = ''; // Reset dropdowns
+                }
+            });
+            updateCurrentReadingDisplay(); // Update DM panel display immediately
+        }
+
+        /**
+         * Handles "Reveal All" button.
+         */
+        function handleRevealAll() {
+            hideAllFortunes(); // Clear previous fortunes
+            fortunePositions.forEach(pos => {
+                const cardElement = document.querySelector(`#position-${pos} .card`);
+                const cardData = dealtCards[pos];
+                if (cardElement && cardData) {
+                    flipCard(cardElement, cardData, pos);
+                }
+            });
+        }
+
+        /**
+         * Handles "Hide All" button.
+         */
+        function handleHideAll() {
+            fortunePositions.forEach(pos => {
+                const cardElement = document.querySelector(`#position-${pos} .card`);
+                if (cardElement) {
+                    cardElement.classList.remove('flipped');
+                }
+            });
+            hideAllFortunes();
+            clearProphecyLog(); // Clear log when hiding cards
+        }
+
+        /**
+         * Handles printing the player handout.
+         */
+        function printPlayerHandout() {
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write('<html><head><title>Tarokka Reading Handout</title>');
+            printWindow.document.write('<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap" rel="stylesheet">');
+            printWindow.document.write('<style>');
+            printWindow.document.write(`
+                body { font-family: 'Merriweather', serif; margin: 20px; color: #333; }
+                h1 { text-align: center; color: #5C001F; margin-bottom: 30px; }
+                .fortune-section { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 8px; }
+                .fortune-section h2 { color: #B8860B; margin-bottom: 10px; }
+                .card-image { max-width: 110px; height: auto; float: right; margin-left: 15px; border: 1px solid #eee; border-radius: 5px; }
+                @media print {
+                    body { font-size: 12pt; }
+                    .fortune-section { page-break-inside: avoid; }
+                }
+            `);
+            printWindow.document.write('</style></head><body>');
+            printWindow.document.write('<h1>Your Tarokka Reading</h1>');
+
+            fortunePositions.forEach(pos => {
+                const cardData = dealtCards[pos];
+                if (cardData) {
+                    const positionTitle = pos.charAt(0).toUpperCase() + pos.slice(1);
+                    printWindow.document.write(`
+                        <div class="fortune-section">
+                            <h2>${positionTitle}: ${cardData.name}</h2>
+                            <img src="${cardData.imageFront}" alt="${cardData.name}" class="card-image">
+                            <p>${cardData.meanings[pos]}</p>
+                        </div>
+                    `);
+                }
+            });
+
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        /**
+         * Saves the current reading to localStorage.
+         */
+        function saveReading() {
+            try {
+                const readingToSave = {
+                    dealtCards: dealtCards,
+                    // Store current rigging selections as well
+                    riggedSelections: fortunePositions.map(pos => ({
+                        position: pos,
+                        cardId: document.getElementById(`rig-${pos}`).value
+                    }))
+                };
+                localStorage.setItem('tarokkaReading', JSON.stringify(readingToSave));
+                showMessageBox('Fate Saved!', 'Your current Tarokka reading has been saved.', 'success');
+            } catch (e) {
+                console.error("Failed to save reading:", e);
+                showMessageBox('Save Error', 'Could not save reading. Local storage might be full or unavailable.', 'error');
+            }
+        }
+
+        /**
+         * Loads a reading from localStorage.
+         */
+        async function loadReading() {
+            try {
+                const savedReading = localStorage.getItem('tarokkaReading');
+                if (savedReading) {
+                    const parsedReading = JSON.parse(savedReading);
+                    dealtCards = parsedReading.dealtCards;
+
+                    await dealCards(dealtCards, false); // Deal without animation
+
+                    // Update rigging dropdowns with loaded selections
+                    if (parsedReading.riggedSelections) {
+                        parsedReading.riggedSelections.forEach(selection => {
+                            const selectElement = document.getElementById(`rig-${selection.position}`);
+                            if (selectElement) {
+                                selectElement.value = selection.cardId;
+                            }
+                        });
+                    }
+
+                    // Re-add flipped cards to log based on the loaded state (assuming all dealt cards were "revealed" in the saved state)
+                    clearProphecyLog(); // Clear existing log
+                    fortunePositions.forEach(pos => {
+                        const cardData = dealtCards[pos];
+                        if (cardData) {
+                            addEntryToProphecyLog(cardData, pos);
+                            // Also visually flip the cards if they were part of the loaded state
+                            const cardElement = document.querySelector(`#position-${pos} .card`);
+                            if (cardElement && !cardElement.classList.contains('flipped')) {
+                                cardElement.classList.add('flipped');
+                                displayFortune(cardData, pos); // Re-display fortune
+                            }
+                        }
+                    });
+
+                    showMessageBox('Prophecy Recalled!', 'Your saved Tarokka reading has been loaded.', 'success');
+                } else {
+                    showMessageBox('No Saved Fate', 'No previous Tarokka reading found.', 'info');
+                }
+            } catch (e) {
+                console.error("Failed to load reading:", e);
+                showMessageBox('Load Error', 'Could not load reading. Data might be corrupted.', 'error');
+            }
+        }
+
+        /**
+         * Displays a custom message box.
+         * @param {string} title - Title of the message.
+         * @param {string} message - Content of the message.
+         * @param {'success'|'error'|'info'} type - Type of message for styling.
+         */
+        function showMessageBox(title, message, type) {
+            const existingBox = document.getElementById('message-box');
+            if (existingBox) existingBox.remove();
+
+            const box = document.createElement('div');
+            box.id = 'message-box';
+            box.classList.add('fixed', 'top-1/2', 'left-1/2', '-translate-x-1/2', '-translate-y-1-2', 'p-6', 'rounded-lg', 'shadow-2xl', 'z-50', 'text-center', 'max-w-sm', 'w-full', 'transform', 'scale-0', 'opacity-0', 'transition-all', 'duration-300', 'ease-out');
+
+            let bgColor = 'bg-gray-800';
+            let borderColor = 'border-gray-600';
+            let textColor = 'text-white';
+            if (type === 'success') {
+                bgColor = 'bg-green-800';
+                borderColor = 'border-green-600';
+            } else if (type === 'error') {
+                bgColor = 'bg-red-800';
+                borderColor = 'border-red-600';
+            } else if (type === 'info') {
+                bgColor = 'bg-blue-800';
+                borderColor = 'border-blue-600';
+            }
+
+            box.classList.add(bgColor, borderColor, textColor, 'border');
+
+            box.innerHTML = `
+                <h3 class="text-xl font-bold mb-3">${title}</h3>
+                <p class="mb-4">${message}</p>
+                <button id="message-box-ok" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">OK</button>
+            `;
+            document.body.appendChild(box);
+
+            // Animate in
+            setTimeout(() => {
+                box.classList.remove('scale-0', 'opacity-0');
+                box.classList.add('scale-100', 'opacity-100');
+            }, 10);
+
+            document.getElementById('message-box-ok').addEventListener('click', () => {
+                box.classList.remove('scale-100', 'opacity-100');
+                box.classList.add('scale-0', 'opacity-0');
+                setTimeout(() => box.remove(), 300); // Remove after animation
+            });
+
+            // Auto-hide after a few seconds
+            setTimeout(() => {
+                if (box.parentNode) { // Check if it hasn't been closed manually
+                    box.classList.remove('scale-100', 'opacity-100');
+                    box.classList.add('scale-0', 'opacity-0');
+                    setTimeout(() => box.remove(), 300);
+                }
+            }, 4000);
+        }
+
+        // Helper function to hide preloader
+        function hidePreloader() {
+            const preloader = document.getElementById('preloader');
+            if (preloader) {
+                preloader.style.opacity = '0';
+                setTimeout(() => {
+                    preloader.style.display = 'none';
+                }, 1000);
+            }
+        }
+
+        /**
+         * Toggles the visibility of the DM control panel.
+         */
+        function toggleDmPanel() {
+            isDmPanelVisible = !isDmPanelVisible;
+            if (isDmPanelVisible) {
+                dmInterfaceContainer.classList.add('active');
+                dmInterfaceContainer.style.pointerEvents = 'auto'; // Ensure pointer events are active
+            } else {
+                dmInterfaceContainer.classList.remove('active');
+                dmInterfaceContainer.style.pointerEvents = 'none'; // Ensure pointer events are off
+            }
+        }
+
+        /**
+         * Toggles the "Cast to Players" mode.
+         */
+        function toggleCastMode() {
+            isCastModeActive = !isCastModeActive;
+            if (isCastModeActive) {
+                // ENTER CAST MODE
+                // Hide DM interface elements
+                dmControlPanel.classList.add('cast-mode-hidden');
+                castToPlayersBtn.classList.add('cast-mode-hidden');
+                patreonBtn.classList.add('cast-mode-hidden');
+                toggleDmBtn.classList.add('cast-mode-hidden'); // The DM toggle button itself
+                prophecyLog.classList.add('cast-mode-hidden'); // Prophecy log
+
+                // Explicitly disable pointer events for the DM interface container
+                dmInterfaceContainer.style.pointerEvents = 'none';
+
+                // Show ESC indicator
+                escIndicator.classList.add('active');
+            } else {
+                // EXIT CAST MODE
+                // Show DM interface elements (if DM panel was visible)
+                dmControlPanel.classList.remove('cast-mode-hidden');
+                castToPlayersBtn.classList.remove('cast-mode-hidden');
+                patreonBtn.classList.remove('cast-mode-hidden');
+                toggleDmBtn.classList.remove('cast-mode-hidden');
+                prophecyLog.classList.remove('cast-mode-hidden');
+
+                // Restore DM panel visibility and pointer events based on its previous state
+                if (isDmPanelVisible) {
+                    dmInterfaceContainer.classList.add('active');
+                    dmInterfaceContainer.style.pointerEvents = 'auto';
+                } else {
+                    dmInterfaceContainer.classList.remove('active');
+                    dmInterfaceContainer.style.pointerEvents = 'none';
+                }
+
+                // Hide ESC indicator
+                escIndicator.classList.remove('active');
+            }
+        }
+
+        /**
+         * Toggles the background music mute state and updates the volume icon.
+         */
+        function toggleMusicMute() {
+            if (backgroundMusic.muted) {
+                backgroundMusic.muted = false;
+                volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                // Set slider to current volume if unmuted, or default if it was 0
+                volumeSlider.value = backgroundMusic.volume === 0 ? 0.3 : backgroundMusic.volume;
+            } else {
+                backgroundMusic.muted = true;
+                volumeBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+            }
+        }
+
+        /**
+         * Updates the background music volume based on the slider.
+         */
+        function updateMusicVolume() {
+            backgroundMusic.volume = volumeSlider.value;
+            // Update the mute button icon based on the new volume
+            if (backgroundMusic.volume === 0) {
+                backgroundMusic.muted = true;
+                volumeBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+            } else {
+                backgroundMusic.muted = false;
+                volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+            }
+        }
+
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Initial setup for single window mode
+    mainGameView.style.display = 'flex';
+    cardSpreadContainer.style.display = 'grid';
+    prophecyLog.style.display = 'block';
+    fortuneDisplay.style.display = 'none'; // Still hidden until cards are flipped
+
+    // DM interface starts hidden
+    dmInterfaceContainer.classList.remove('active');
+    dmInterfaceContainer.style.pointerEvents = 'none'; // Ensure it's not blocking initially
+    toggleDmBtn.style.display = 'block'; // DM toggle button is always visible
+
+    // Initialize main game functions
+    initDustMotes();
+    renderEmptyCardPositions();
+    populateRiggingDropdowns(); // Populate dropdowns immediately
+
+    // Set and attempt to play background music
+    backgroundMusic.loop = true; // Ensure music loops
+    backgroundMusic.volume = 0.3; // 30% volume
+    volumeSlider.value = 0.3; // Set slider to initial volume
+    backgroundMusic.play().catch(e => {
+        console.warn("Autoplay was prevented. User interaction required to play music.", e);
+        // Optionally, show a message to the user to click to enable music
+    });
+
+    // Perform initial shuffle and deal
+    await handleShuffleAndDeal();
+    hidePreloader();
+
+    // Button Event Listeners
+    toggleDmBtn.addEventListener('click', toggleDmPanel);
+    randomizeAllBtn.addEventListener('click', handleRandomizeAll);
+    shuffleDealBtn.addEventListener('click', handleShuffleAndDeal);
+    revealAllBtn.addEventListener('click', handleRevealAll);
+    hideAllBtn.addEventListener('click', handleHideAll);
+    printHandoutBtn.addEventListener('click', printPlayerHandout);
+    saveReadingBtn.addEventListener('click', saveReading);
+    loadReadingBtn.addEventListener('click', loadReading);
+    castToPlayersBtn.addEventListener('click', toggleCastMode);
+    volumeBtn.addEventListener('click', toggleMusicMute); // Mute/unmute button listener
+    volumeSlider.addEventListener('input', updateMusicVolume); // Slider input listener
+    // Patreon button click handled by inline onclick for simplicity
+
+    // Keyboard listener for ESC key
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && isCastModeActive) {
+            toggleCastMode(); // Exit cast mode
+        }
+    });
+
+
+    // Parallax effect (modified to only affect background)
+    document.addEventListener('mousemove', (e) => {
+        const x = (e.clientX / window.innerWidth - 0.5) * 2;
+        const y = (e.clientY / window.innerHeight - 0.5) * 2;
+
+        const bgMoveX = x * 15;
+        const bgMoveY = y * 15;
+        backgroundTable.style.transform = `translate(${bgMoveX}px, ${bgMoveY}px) translateZ(-100px)`;
+
+        // Removed card parallax:
+        // document.querySelectorAll('.card').forEach(cardElement => {
+        //     let existingFlipTransform = '';
+        //     if (cardElement.classList.contains('flipped')) {
+        //             existingFlipTransform = 'rotateY(180deg) scale(1.05)';
+        //     } else {
+        //         existingFlipTransform = 'rotateY(0deg)';
+        //     }
+        //     cardElement.style.transform = `translate(${cardMoveX}px, ${cardMoveY}px) ${existingFlipTransform}`;
+        // });
+    });
+
+    // Candle flicker effect
+    function flickerCandle() {
+        const intensity = Math.random() * 0.1 + 0.9;
+        const spread = Math.random() * 20 + 40;
+        const colorAlpha = 0.4 + (Math.random() * 0.2);
+        candleLightSource.style.boxShadow = `0 0 ${spread}px rgba(255, 165, 0, ${colorAlpha})`;
+        setTimeout(flickerCandle, Math.random() * 200 + 50);
+    }
+    flickerCandle();
+});
+
+    </script>
+</body>
+</html>
