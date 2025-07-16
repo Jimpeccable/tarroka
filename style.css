@@ -71,7 +71,7 @@ body {
     position: absolute;
     width: 100vw; /* Full screen width */
     height: 100vh; /* Full screen height */
-    background-image: url('./img/table.gif'); /* Corrected path to lowercase 'img' */
+    background-image: url('./IMG/table.gif'); /* Corrected path to lowercase 'img' */
     background-size: cover; /* Ensures the GIF covers the entire element */
     background-position: center;
     transition: transform 0.1s ease-out;
@@ -221,7 +221,7 @@ body {
 
 .card-back {
     /* Default card back - will be overridden by JS if local file exists */
-    background-image: url('./img/back.png'); /* Corrected path to lowercase 'img' */
+    background-image: url('./IMG/back.png'); /* Corrected path to lowercase 'img' */
     background-color: var(--color-burgundy); /* Fallback */
     box-shadow: inset 0 0 15px rgba(0,0,0,0.7); /* Inner shadow for depth */
     transition: box-shadow 0.3s ease, filter 0.3s ease;
@@ -291,23 +291,23 @@ body {
 
 /* DM Interface Container */
 #dm-interface-container {
-    position: absolute;
+    position: fixed; /* Changed from absolute to fixed */
     top: 10px;
-    left: 10px;
+    left: -200px; /* Start completely off-screen to the left */
     display: flex;
     flex-direction: column;
     gap: 10px; /* Space between elements */
     z-index: 30;
     opacity: 0; /* Initially hidden */
     pointer-events: none; /* Disable interaction when hidden */
-    transform: translateX(-100%); /* Start off-screen */
-    transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+    transition: opacity 0.4s ease-in-out, left 0.4s ease-in-out; /* Transition both opacity and left */
+    width: 180px; /* Explicitly set width to prevent reflows later */
 }
 
 #dm-interface-container.active {
     opacity: 1; /* Visible */
     pointer-events: auto; /* Enable interaction */
-    transform: translateX(0); /* Slide into view */
+    left: 10px; /* Slide into view */
 }
 
 /* UI elements - DM Panel */
@@ -399,60 +399,6 @@ body {
     box-shadow: 0 0px 2px rgba(139, 0, 0, 0.3);
 }
 
-/* Button hover glow */
-.dm-controls button::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    opacity: 0;
-    transition: width 0.4s ease, height 0.4s ease, opacity 0.4s ease;
-}
-
-.dm-controls button:hover::before {
-    width: 200%;
-    height: 200%;
-    opacity: 1;
-}
-
-/* DM Panel - Current Reading Display */
-#current-reading-display {
-    background-color: rgba(0, 0, 0, 0.4); /* More faded */
-    border: 1px solid rgba(184, 134, 11, 0.2); /* Faded border */
-    border-radius: 6px;
-    padding: 8px;
-    margin-top: 10px;
-    color: var(--color-off-white);
-    font-size: 0.8em; /* Smaller font */
-    max-height: 150px; /* Reduced height */
-    overflow-y: auto;
-}
-
-#current-reading-display h4 {
-    color: var(--color-muted-gold);
-    font-weight: bold;
-    margin-bottom: 4px;
-    font-size: 1em;
-}
-
-#current-reading-display ul {
-    list-style: none;
-    padding: 0;
-}
-
-#current-reading-display li {
-    margin-bottom: 3px;
-}
-
-#current-reading-display li span {
-    color: var(--color-tarnished-silver);
-}
-
 /* Prophecy Log Sidebar */
 #prophecy-log {
     position: absolute;
@@ -471,16 +417,21 @@ body {
     font-family: 'Merriweather', serif;
     max-height: 95vh;
     overflow-y: auto;
-    /* transition: opacity 0.3s ease-in-out; */ /* Removed as it's always visible */
     display: block; /* Ensure it's always block */
-    opacity: 1; /* Ensure it's always opaque */
+    opacity: 0.7; /* Always slightly faded */
     pointer-events: auto; /* Ensure it's always interactive */
+    transition: opacity 0.3s ease-in-out, background-color 0.3s ease-in-out, border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
 }
 #prophecy-log:hover {
     opacity: 1; /* Full opacity on hover */
     background-color: rgba(26, 26, 26, 0.95); /* Less faded on hover */
     border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
+}
+/* Cast mode specific style for prophecy log */
+#prophecy-log.cast-mode-hidden {
+    opacity: 0.3; /* More faded in cast mode */
+    pointer-events: none; /* Non-interactive in cast mode */
 }
 
 
@@ -760,8 +711,12 @@ body {
 }
 
 /* DM Card Info Box */
-#dm-card-info-box {
-    width: 180px; /* Match DM panel width */
+#dm-hint-box {
+    position: absolute; /* Changed to absolute to prevent layout shifts */
+    top: 50%; /* Center vertically */
+    left: 50%; /* Center horizontally */
+    transform: translate(-50%, -50%); /* Adjust for true centering */
+    width: 300px; /* Fixed width */
     background-color: rgba(26, 26, 26, 0.7); /* Faded charcoal black */
     border: 1px solid rgba(184, 134, 11, 0.2); /* Faded gold border */
     border-radius: 8px;
@@ -770,16 +725,17 @@ body {
     color: var(--color-off-white);
     font-family: 'Merriweather', serif;
     font-size: 0.8em;
-    margin-top: 10px; /* Space below DM panel */
     opacity: 0; /* Hidden by default */
     pointer-events: none; /* Non-interactive when hidden */
     transition: opacity 0.3s ease-in-out;
+    z-index: 40; /* Above cards, below DM panel */
 }
 
-#dm-card-info-box.active {
+#dm-hint-box.active {
     opacity: 1;
     pointer-events: auto;
 }
+
 
 /* Responsive adjustments */
 @media (max-width: 1024px) {
@@ -843,8 +799,8 @@ body {
     #music-selector {
         width: 80px;
     }
-    #dm-card-info-box {
-        width: 150px;
+    #dm-hint-box {
+        width: 250px; /* Slightly smaller */
         padding: 8px;
         font-size: 0.7em;
     }
@@ -865,8 +821,13 @@ body {
         font-size: 0.8em;
         bottom: 2%;
     }
-    #dm-control-panel, #prophecy-log {
-        width: 120px; /* Very small for mobile */
+    #dm-control-panel {
+        width: 170px; /* Very small for mobile */
+        top: 5px;
+        padding: 4px;
+    }
+    #prophecy-log {
+        width: 120px; /* Keep consistent with previous */
         top: 5px;
         padding: 4px;
     }
@@ -884,21 +845,6 @@ body {
     .dm-controls button {
         padding: 3px 5px;
         font-size: 0.65em;
-    }
-    #current-reading-display {
-        font-size: 0.7em;
-        padding: 5px;
-    }
-    #prophecy-log h3 {
-        font-size: 0.9em;
-    }
-    .log-entry {
-        font-size: 0.6em;
-        padding: 4px;
-    }
-    .log-entry .card-thumbnail {
-        width: 25px;
-        height: 43px;
     }
     #legal-mention {
         font-size: 0.5em;
@@ -939,8 +885,8 @@ body {
     #music-selector {
         width: 60px;
     }
-    #dm-card-info-box {
-        width: 120px;
+    #dm-hint-box {
+        width: 200px; /* Smaller for mobile */
         padding: 6px;
         font-size: 0.6em;
     }
