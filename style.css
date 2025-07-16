@@ -71,7 +71,7 @@ body {
     position: absolute;
     width: 100vw; /* Full screen width */
     height: 100vh; /* Full screen height */
-    background-image: url('./img/table.gif'); /* Corrected path to lowercase 'img' */
+    background-image: url('.tarroka/img/table.gif'); /* Corrected path to lowercase 'img' */
     background-size: cover; /* Ensures the GIF covers the entire element */
     background-position: center;
     transition: transform 0.1s ease-out;
