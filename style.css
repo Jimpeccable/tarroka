@@ -71,7 +71,7 @@ body {
     position: absolute;
     width: 100vw; /* Full screen width */
     height: 100vh; /* Full screen height */
-    background-image: url('/tarroka/img/table.gif'); /* Updated path */
+    background-image: url('./IMG/table.gif'); /* Updated path */
     background-size: cover; /* Ensures the GIF covers the entire element */
     background-position: center;
     transition: transform 0.1s ease-out;
@@ -221,7 +221,7 @@ body {
 
 .card-back {
     /* Default card back - will be overridden by JS if local file exists */
-    background-image: url('/tarroka/img/back.png'); /* Updated path */
+    background-image: url('./IMG/back.png'); /* Updated path */
     background-color: var(--color-burgundy); /* Fallback */
     box-shadow: inset 0 0 15px rgba(0,0,0,0.7); /* Inner shadow for depth */
     transition: box-shadow 0.3s ease, filter 0.3s ease;
@@ -312,7 +312,7 @@ body {
 
 /* UI elements - DM Panel */
 #dm-control-panel {
-    width: 230px; /* Increased width by 50px */
+    width: 180px; /* Smaller width */
     background-color: rgba(26, 26, 26, 0.05); /* Very faded */
     border: 1px solid rgba(184, 134, 11, 0.05); /* Faded border */
     border-radius: 8px;
@@ -420,6 +420,39 @@ body {
     opacity: 1;
 }
 
+/* DM Panel - Current Reading Display */
+#current-reading-display {
+    background-color: rgba(0, 0, 0, 0.4); /* More faded */
+    border: 1px solid rgba(184, 134, 11, 0.2); /* Faded border */
+    border-radius: 6px;
+    padding: 8px;
+    margin-top: 10px;
+    color: var(--color-off-white);
+    font-size: 0.8em; /* Smaller font */
+    max-height: 150px; /* Reduced height */
+    overflow-y: auto;
+}
+
+#current-reading-display h4 {
+    color: var(--color-muted-gold);
+    font-weight: bold;
+    margin-bottom: 4px;
+    font-size: 1em;
+}
+
+#current-reading-display ul {
+    list-style: none;
+    padding: 0;
+}
+
+#current-reading-display li {
+    margin-bottom: 3px;
+}
+
+#current-reading-display li span {
+    color: var(--color-tarnished-silver);
+}
+
 /* Prophecy Log Sidebar */
 #prophecy-log {
     position: absolute;
@@ -438,7 +471,10 @@ body {
     font-family: 'Merriweather', serif;
     max-height: 95vh;
     overflow-y: auto;
-    transition: opacity 0.3s ease-in-out;
+    /* transition: opacity 0.3s ease-in-out; */ /* Removed as it's always visible */
+    display: block; /* Ensure it's always block */
+    opacity: 1; /* Ensure it's always opaque */
+    pointer-events: auto; /* Ensure it's always interactive */
 }
 #prophecy-log:hover {
     opacity: 1; /* Full opacity on hover */
@@ -567,7 +603,7 @@ body {
 
 /* Styling for the new Patreon button and Cast to Players button to match DM panel faded style */
 .faded-button {
-    width: 230px; /* Match DM panel width */
+    width: 180px; /* Match DM panel width */
     background-color: rgba(26, 26, 26, 0.05); /* Very faded */
     border: 1px solid rgba(184, 134, 11, 0.05); /* Faded border */
     border-radius: 8px;
@@ -590,6 +626,29 @@ body {
     border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
 }
+
+/* Position for Cast to Players and Patreon buttons */
+.dm-bottom-button {
+    position: absolute;
+    left: 10px; /* Align with DM toggle button */
+    z-index: 50; /* Same as DM toggle button */
+    opacity: 0.7; /* Faded by default */
+    transition: opacity 0.3s ease-in-out, transform 0.2s ease;
+}
+
+#cast-to-players-btn {
+    bottom: 50px; /* Above DM toggle, below Patreon */
+}
+
+#patreon-btn {
+    bottom: 90px; /* Above Cast to Players */
+}
+
+.dm-bottom-button:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
 
 /* Hide elements when casting to players */
 .cast-mode-hidden {
@@ -700,41 +759,27 @@ body {
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
 }
 
-/* DM Hint Box Styling */
-#dm-hint-box {
-    position: absolute;
-    top: 10px;
-    left: 50%; /* Center horizontally */
-    transform: translateX(-50%);
-    width: 300px; /* Small width */
-    background-color: rgba(26, 26, 26, 0.05); /* Very faded */
-    border: 1px solid rgba(184, 134, 11, 0.05); /* Faded border */
+/* DM Card Info Box */
+#dm-card-info-box {
+    width: 180px; /* Match DM panel width */
+    background-color: rgba(26, 26, 26, 0.7); /* Faded charcoal black */
+    border: 1px solid rgba(184, 134, 11, 0.2); /* Faded gold border */
     border-radius: 8px;
     padding: 10px;
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     color: var(--color-off-white);
     font-family: 'Merriweather', serif;
-    font-size: 0.85em;
-    z-index: 28; /* Below prophecy log, above main content */
+    font-size: 0.8em;
+    margin-top: 10px; /* Space below DM panel */
     opacity: 0; /* Hidden by default */
-    pointer-events: none; /* Non-interactive */
+    pointer-events: none; /* Non-interactive when hidden */
     transition: opacity 0.3s ease-in-out;
-    max-height: 150px; /* Limit height */
-    overflow-y: auto; /* Scroll if content overflows */
-    display: block; /* Ensure it's not display: none */
 }
 
-#dm-hint-box.active {
+#dm-card-info-box.active {
     opacity: 1;
     pointer-events: auto;
 }
-
-#dm-hint-box:hover {
-    background-color: rgba(26, 26, 26, 0.95); /* Full opacity on hover */
-    border: 1px solid var(--color-muted-gold); /* Stronger border on hover */
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.7); /* Stronger shadow on hover */
-}
-
 
 /* Responsive adjustments */
 @media (max-width: 1024px) {
@@ -752,12 +797,8 @@ body {
         padding: 15px;
         font-size: 0.9em;
     }
-    #dm-control-panel {
-        width: 200px; /* Even smaller for tablets */
-        padding: 6px;
-    }
-    #prophecy-log {
-        width: 150px; /* Keep consistent with previous */
+    #dm-control-panel, #prophecy-log {
+        width: 150px; /* Even smaller for tablets */
         padding: 6px;
     }
     .dm-controls button, .dm-controls select {
@@ -776,9 +817,15 @@ body {
         font-size: 1.2em;
     }
     .faded-button {
-        width: 200px; /* Match DM panel width */
+        width: 150px;
         padding: 6px;
         font-size: 0.8em;
+    }
+    #cast-to-players-btn {
+        bottom: 50px;
+    }
+    #patreon-btn {
+        bottom: 90px;
     }
     #volume-controls {
         gap: 3px;
@@ -796,10 +843,10 @@ body {
     #music-selector {
         width: 80px;
     }
-    #dm-hint-box {
-        width: 250px;
+    #dm-card-info-box {
+        width: 150px;
         padding: 8px;
-        font-size: 0.8em;
+        font-size: 0.7em;
     }
 }
 
@@ -818,13 +865,8 @@ body {
         font-size: 0.8em;
         bottom: 2%;
     }
-    #dm-control-panel {
-        width: 170px; /* Very small for mobile */
-        top: 5px;
-        padding: 4px;
-    }
-    #prophecy-log {
-        width: 120px; /* Keep consistent with previous */
+    #dm-control-panel, #prophecy-log {
+        width: 120px; /* Very small for mobile */
         top: 5px;
         padding: 4px;
     }
@@ -843,6 +885,21 @@ body {
         padding: 3px 5px;
         font-size: 0.65em;
     }
+    #current-reading-display {
+        font-size: 0.7em;
+        padding: 5px;
+    }
+    #prophecy-log h3 {
+        font-size: 0.9em;
+    }
+    .log-entry {
+        font-size: 0.6em;
+        padding: 4px;
+    }
+    .log-entry .card-thumbnail {
+        width: 25px;
+        height: 43px;
+    }
     #legal-mention {
         font-size: 0.5em;
         bottom: 2px;
@@ -856,9 +913,15 @@ body {
         font-size: 1em;
     }
     .faded-button {
-        width: 170px; /* Match DM panel width */
+        width: 120px;
         padding: 4px;
         font-size: 0.7em;
+    }
+    #cast-to-players-btn {
+        bottom: 40px; /* Adjusted for smaller screen */
+    }
+    #patreon-btn {
+        bottom: 70px; /* Adjusted for smaller screen */
     }
     #volume-controls {
         gap: 2px;
@@ -876,9 +939,9 @@ body {
     #music-selector {
         width: 60px;
     }
-    #dm-hint-box {
-        width: 200px;
+    #dm-card-info-box {
+        width: 120px;
         padding: 6px;
-        font-size: 0.7em;
+        font-size: 0.6em;
     }
 }
